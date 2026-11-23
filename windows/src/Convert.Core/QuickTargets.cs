@@ -19,8 +19,14 @@ public static class QuickTargets
     /// <summary>Other spellings of the same format, so a .jpeg isn't offered "JPEG".</summary>
     private static readonly Dictionary<string, string> SameAs = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["jpeg"] = "jpg", ["jpe"] = "jpg", ["jfif"] = "jpg", ["tif"] = "tiff", ["wave"] = "wav", ["aif"] = "aiff",
-        ["htm"] = "html", ["otf"] = "ttf",
+        ["jpeg"] = "jpg",
+        ["jpe"] = "jpg",
+        ["jfif"] = "jpg",
+        ["tif"] = "tiff",
+        ["wave"] = "wav",
+        ["aif"] = "aiff",
+        ["htm"] = "html",
+        ["otf"] = "ttf",
     };
 
     /// <summary>
