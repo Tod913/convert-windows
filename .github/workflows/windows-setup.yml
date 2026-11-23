@@ -121,6 +121,39 @@ jobs:
           foreach ($f in "ffmpeg.exe", "ffprobe.exe", "FFMPEG-LICENSE.txt", "FFMPEG-NOTICE.txt") {
             if (-not (Test-Path (Join-Path $tools $f))) { throw "$f isn't in $tools after the setup program ran" }
           }
+      # The setup program is unsigned, so it adds the classic menu entry and Send to. Explorer starts
+      # Convert once per selected file; the processes must gather the files into one window.
+      - name: Check the classic menu entry and Send to
+        run: |
+          $exe = Join-Path $env:LOCALAPPDATA "Programs\Convert\Convert.exe"
+          foreach ($ext in "mp4", "mp3", "jpg", "pdf", "woff2") {
+            $key = "HKCU:\Software\Classes\SystemFileAssociations\.$ext\shell\Convert"
+            $command = (Get-ItemProperty -LiteralPath "$key\command" -ErrorAction Stop).'(default)'
+            if ($command -ne "`"$exe`" --open `"%1`"") { throw "Unexpected command for .${ext}: $command" }
+            if ((Get-ItemProperty -LiteralPath $key).MultiSelectModel -ne "Player") { throw "MultiSelectModel isn't Player for .$ext" }
+          }
+          $sendTo = Join-Path ([Environment]::GetFolderPath("SendTo")) "Convert.lnk"
+          if (-not (Test-Path $sendTo)) { throw "No Send to shortcut at $sendTo" }
+          $lnk = (New-Object -ComObject WScript.Shell).CreateShortcut($sendTo)
+          if ($lnk.TargetPath -ne $exe -or $lnk.Arguments -ne "--open") { throw "Send to shortcut points at '$($lnk.TargetPath) $($lnk.Arguments)'" }
+
+          # Run the menu entry for three files the way Explorer does (through the shell, once per file).
+          $dir = Join-Path $env:RUNNER_TEMP "menu"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          $names = "one.mp3", "two.jpg", "three – été.pdf"
+          foreach ($n in $names) { Set-Content (Join-Path $dir $n) "x" }
+          $report = Join-Path $env:RUNNER_TEMP "gathered.txt"
+          $env:CONVERT_OPEN_REPORT = $report
+          $folder = (New-Object -ComObject Shell.Application).Namespace($dir)
+          foreach ($n in $names) { $folder.ParseName($n).InvokeVerb("Convert") }
+          for ($i = 0; $i -lt 30 -and -not (Test-Path $report); $i++) { Start-Sleep -Seconds 1 }
+          Start-Sleep -Seconds 1
+          if (-not (Test-Path $report)) { throw "Convert didn't write $report" }
+          $gathered = @(Get-Content $report -Encoding utf8 | Sort-Object)
+          $expected = @($names | ForEach-Object { Join-Path $dir $_ } | Sort-Object)
+          Write-Host "Gathered: $($gathered -join ' | ')"
+          if (($gathered -join "`n") -ne ($expected -join "`n")) { throw "Expected one window with all three files" }
+          $env:CONVERT_OPEN_REPORT = $null
       # -Strict: audio and video must work with the bundled ffmpeg. LibreOffice isn't installed, so the
       # smoke test skips (and lists) Word, ODT and RTF.
       - name: Smoke test the installed app
@@ -135,6 +168,8 @@ jobs:
           # The uninstaller removes what's left of the folder a moment after it exits.
           for ($i = 0; $i -lt 20 -and (Test-Path (Join-Path $dir "Convert.exe")); $i++) { Start-Sleep -Seconds 1 }
           if (Test-Path (Join-Path $dir "Convert.exe")) { throw "Convert.exe is still in $dir after uninstalling" }
+          if (Test-Path "HKCU:\Software\Classes\SystemFileAssociations\.mp4\shell\Convert") { throw "The classic menu entry is still there" }
+          if (Test-Path (Join-Path ([Environment]::GetFolderPath("SendTo")) "Convert.lnk")) { throw "The Send to shortcut is still there" }
       - name: Keep the setup program
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

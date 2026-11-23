@@ -41,6 +41,14 @@ public partial class App : Application
             return;
         }
 
+        // From the classic right-click menu and Send to: Explorer may start one Convert per selected
+        // file, so the files are gathered into one window (SelectionGate).
+        if (args.Length > 1 && args[0] == "--open")
+        {
+            OpenGathered(args[1..]);
+            return;
+        }
+
         var files = new List<string>();
         for (var i = 0; i < args.Length; i++)
         {
@@ -52,6 +60,49 @@ public partial class App : Application
 
         if (files.Any(f => MediaKinds.Of(f) is MediaKind.Video)) HardwareEncoder.Warmup();
         new MainWindow(new MainViewModel(files)).Show();
+    }
+
+    private void OpenGathered(string[] args)
+    {
+        var files = args.Select(a => Path.GetFullPath(a.Trim('"'))).ToList();
+        var gate = SelectionGate.Open(files);
+        if (gate == null)
+        {
+            AppExit.Now(0); // another Convert window took them
+            return;
+        }
+
+        // For the setup program's test: write what was gathered to a file instead of opening a window.
+        if (Environment.GetEnvironmentVariable("CONVERT_OPEN_REPORT") is { Length: > 0 } report)
+        {
+            var gathered = new List<string>(files);
+            gate.Listen(more => { lock (gathered) gathered.AddRange(more); return true; });
+            gate.Completed.ContinueWith(_ =>
+            {
+                lock (gathered) File.WriteAllLines(report, gathered);
+                AppExit.Now(0);
+            });
+            return;
+        }
+
+        if (files.Any(f => MediaKinds.Of(f) is MediaKind.Video)) HardwareEncoder.Warmup();
+        var vm = new MainViewModel(files);
+        var window = new MainWindow(vm);
+        window.Closed += (_, _) => gate.Dispose();
+        gate.Listen(more =>
+        {
+            try
+            {
+                return Dispatcher.Invoke(() =>
+                {
+                    if (vm.Phase != Phase.Idle || !window.IsVisible) return false;
+                    vm.Add(more);
+                    return true;
+                });
+            }
+            catch (OperationCanceledException) { return false; } // the app is closing
+        });
+        window.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)

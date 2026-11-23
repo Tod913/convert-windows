@@ -4,6 +4,7 @@
 ;   OutDir            where the setup program goes
 ;   DotNetVersion     the .NET Desktop Runtime to fetch when the PC has none, e.g. 10.0.15
 ;   DotNetSha256      the SHA-256 of Microsoft's installer for it
+;   MenuExtensions    the file extensions Convert takes, separated by spaces (for the classic menu)
 ;   Sign              defined when the setup program and its uninstaller are to be signed (see /S in build.ps1)
 ;
 ; It installs for the current user only and never asks for administrator rights itself. The one
@@ -44,6 +45,8 @@ OutputBaseFilename=Convert-{#AppVersion}-setup
 Compression=lzma2/ultra64
 SolidCompression=yes
 CloseApplications=yes
+; Tells Explorer about the classic menu entries added or removed below.
+ChangesAssociations=yes
 RestartApplications=no
 #ifdef Sign
 SignTool=convertsign
@@ -55,6 +58,10 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 Source: "{#AppDir}\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+
+[Icons]
+; Send to → Convert: all selected files at once, signed or not.
+Name: "{usersendto}\Convert"; Filename: "{app}\Convert.exe"; Parameters: "--open"; IconFilename: "{app}\Convert.exe"
 
 [Run]
 Filename: "{app}\Convert.exe"; Description: "Open Convert"; Flags: postinstall nowait skipifsilent unchecked
@@ -71,7 +78,7 @@ Type: files; Name: "{userprograms}\Convert.lnk"
 Type: dirifempty; Name: "{localappdata}\Convert"
 
 [Messages]
-FinishedLabel=Convert is installed. Right-click a file in Explorer and choose Convert…, or open Convert from the Start menu and drop files on its window.
+FinishedLabel=Convert is installed. Right-click a file in Explorer and choose Convert… (or Show more options → Convert…), use Send to → Convert, or open Convert from the Start menu and drop files on its window.
 
 [Code]
 var
@@ -176,6 +183,56 @@ begin
   end;
 end;
 
+const
+  AssociationsKey = 'Software\Classes\SystemFileAssociations';
+
+{ The classic right-click menu entry ("Show more options" on Windows 11, or Shift + right-click), for a
+  Convert whose package Windows won't register because it isn't signed by a trusted publisher. One
+  entry per file type Convert takes, for this user only. Explorer starts Convert once per selected file
+  ("Player" lifts the limit of 15 files); Convert.exe --open gathers them into one window. }
+procedure AddClassicMenu;
+var
+  Rest, Ext, Key, Exe: String;
+  P: Integer;
+begin
+  Exe := ExpandConstant('{app}\Convert.exe');
+  Rest := '{#MenuExtensions} ';
+  while Rest <> '' do
+  begin
+    P := Pos(' ', Rest);
+    Ext := Copy(Rest, 1, P - 1);
+    Delete(Rest, 1, P);
+    if Ext = '' then Continue;
+    Key := AssociationsKey + '\.' + Ext + '\shell\Convert';
+    RegWriteStringValue(HKCU, Key, 'MUIVerb', 'Convert' + #$2026);
+    RegWriteStringValue(HKCU, Key, 'Icon', '"' + Exe + '",0');
+    RegWriteStringValue(HKCU, Key, 'MultiSelectModel', 'Player');
+    RegWriteStringValue(HKCU, Key + '\command', '', '"' + Exe + '" --open "%1"');
+  end;
+end;
+
+{ Removes every classic entry that starts this Convert, including ones for file types an earlier
+  version took, and leaves other programs' entries alone. }
+procedure RemoveClassicMenu;
+var
+  Names: TArrayOfString;
+  I: Integer;
+  Key, Command, Exe: String;
+begin
+  if not RegGetSubkeyNames(HKCU, AssociationsKey, Names) then Exit;
+  Exe := Lowercase(ExpandConstant('{app}\Convert.exe'));
+  for I := 0 to GetArrayLength(Names) - 1 do
+  begin
+    Key := AssociationsKey + '\' + Names[I];
+    if RegQueryStringValue(HKCU, Key + '\shell\Convert\command', '', Command) and (Pos(Exe, Lowercase(Command)) > 0) then
+    begin
+      RegDeleteKeyIncludingSubkeys(HKCU, Key + '\shell\Convert');
+      RegDeleteKeyIfEmpty(HKCU, Key + '\shell');
+      RegDeleteKeyIfEmpty(HKCU, Key);
+    end;
+  end;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   Code: Integer;
@@ -184,21 +241,25 @@ begin
   if CurStep <> ssPostInstall then Exit;
   Shortcut := ExpandConstant('{userprograms}\Convert.lnk');
   Code := RegisterMenu;
+  RemoveClassicMenu;
   if Code = 0 then
   begin
-    { Registered, Convert is in the Start menu by itself. }
+    { Registered, Convert is in the Start menu by itself, and in the menu's top part. }
     DeleteFile(Shortcut);
     Exit;
   end;
+  AddClassicMenu;
   { Not in the menu: Convert still works when opened, so it at least gets a Start menu entry. }
   CreateShellLink(Shortcut, 'Convert', ExpandConstant('{app}\Convert.exe'), '', ExpandConstant('{app}'), '', 0, SW_SHOWNORMAL);
   if Code = 3 then
     Reason := 'Windows doesn''t trust the signature of this copy of Convert.'
   else
     Reason := 'Windows refused to register it (code ' + IntToStr(Code) + ').';
-  Log('Menu registration failed: ' + Reason);
-  SuppressibleMsgBox('Convert is installed, but it couldn''t be added to Explorer''s right-click menu: ' + Reason + #13#10#13#10 +
-                     'You can still open Convert from the Start menu and drop files on its window.', mbError, MB_OK, IDOK);
+  Log('Menu registration failed: ' + Reason + ' Added the classic menu entry instead.');
+  SuppressibleMsgBox('Convert is installed.' + #13#10#13#10 +
+                     'To convert files, select them in Explorer, right-click and choose Show more options → Convert… ' +
+                     '(or hold Shift while you right-click), or use Send to → Convert.' + #13#10#13#10 +
+                     'Convert isn''t in the top part of the right-click menu because ' + Reason, mbInformation, MB_OK, IDOK);
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
@@ -206,6 +267,7 @@ var
   Settings, Folder: String;
   Attempt: Integer;
 begin
+  if CurUninstallStep = usUninstall then RemoveClassicMenu;
   if CurUninstallStep <> usPostUninstall then Exit;
   { Windows holds on to a few of Convert's files (its logos, for one) for a moment after the menu
     entry is gone, so their folders are still there when the uninstaller gets to them. The program
