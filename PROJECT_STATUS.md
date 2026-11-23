@@ -84,14 +84,14 @@ possible, so updates from the original project can still be merged in.
       now bundles ffmpeg 9.0.2 (+ licence and source notice) into `tools\` next to `Convert.exe`; the
       installed app's strict smoke test passed (113 passed, 0 failed, 20 skipped for LibreOffice) using
       the bundled ffmpeg. Installer is 128 MB (was 16 MB). Tested by you 2026-11-23 on Windows 11: installs, opens, MP4 → GIF works.
-- [ ] **Stage 3: Right-click for everyone (option A).** Cloud part done 2026-11-23. When Windows won't
+- [x] **Stage 3: Right-click for everyone (option A).** Cloud part done 2026-11-23. When Windows won't
       register the unsigned package, the installer adds a classic "Convert…" entry for each file type
       (HKCU `SystemFileAssociations\.ext\shell\Convert`, MultiSelectModel=Player) and a Send to
       shortcut, both running `Convert.exe --open`. Explorer starts one process per file;
       `SelectionGate` (Convert.Core) gathers them into one window over a per-user named pipe. Passed:
       format, build, unit tests (incl. new `SelectionGateTests`), smoke test, and the setup workflow's
       new checks (entries exist, 3 files via the shell verb land in one window, removed on uninstall).
-      **Waiting on:** you testing it on your PC.
+      Tested by you 2026-11-23: single file, Shift+right-click, multi-select (one window), Send to all work.
 - [ ] **Stage 4: Choose where files are saved.** Add a setting: next to the original (default), a fixed
       folder you pick, or ask each time. Tests added for it.
 - [ ] **Stage 5: Fewer clicks (optional).** A "Convert to ▸ MP3 / MP4 / JPEG …" submenu that converts
@@ -110,7 +110,7 @@ possible, so updates from the original project can still be merged in.
   - Word/ODT/RTF conversions untested (need LibreOffice).
   - Installer size: the "full" ffmpeg build is large. A smaller build could be chosen in Stage 7.
   - The right-click menu doesn't appear yet with this installer (unsigned); expected until Stage 3.
-- **Next step:** you test the Stage 3 installer on your PC; then Stage 4.
+- **Next step:** Stage 4 (choose where converted files are saved).
 - **Ideas noted:** optional "Open file when done" setting.
 
 ### How to re-run the cloud checks
