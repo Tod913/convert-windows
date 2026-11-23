@@ -29,6 +29,9 @@ env:
   # (github.com/jrsoftware/issrc, tag is-6_7_3).
   INNO_SETUP_VERSION: 6.7.3
   INNO_SETUP_SHA256: 9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732
+  # The ffmpeg bundled into the setup program: the same pin as windows.yml, bump them together.
+  FFMPEG_VERSION: 9.0.2
+  FFMPEG_SHA256: 759d0a9831c436a0eb331ad36f236c06cb04aaa0005da46571f0e9d3d9206f6b
 
 defaults:
   run:
@@ -64,6 +67,36 @@ jobs:
           Remove-Item $exe
           $iscc = Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { throw "ISCC.exe isn't at $iscc after installing Inno Setup" }
+      # Into windows\tools\ffmpeg, where build.ps1 picks it up and ships it in tools\ next to Convert.exe.
+      # Not on PATH, so the smoke test below can only pass with the bundled copy.
+      - name: Get ffmpeg to bundle
+        run: |
+          $ProgressPreference = "SilentlyContinue"
+          $name = "ffmpeg-$env:FFMPEG_VERSION-full_build"
+          $zip = Join-Path $env:RUNNER_TEMP "$name.zip"
+          Invoke-WebRequest "https://github.com/GyanD/codexffmpeg/releases/download/$env:FFMPEG_VERSION/$name.zip" -OutFile $zip
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash
+          if ($hash -ne $env:FFMPEG_SHA256) { throw "$name.zip has SHA-256 $hash, expected $env:FFMPEG_SHA256" }
+          $dest = "windows\tools\ffmpeg"
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          & "$env:SystemRoot\System32\tar.exe" -xf $zip -C $dest --strip-components 2 "$name/bin/ffmpeg.exe" "$name/bin/ffprobe.exe"
+          if ($LASTEXITCODE) { throw "Couldn't extract ffmpeg from $name.zip" }
+          & "$env:SystemRoot\System32\tar.exe" -xf $zip -C $dest --strip-components 1 "$name/LICENSE"
+          if ($LASTEXITCODE) { throw "Couldn't extract ffmpeg's LICENSE from $name.zip" }
+          Move-Item (Join-Path $dest "LICENSE") (Join-Path $dest "FFMPEG-LICENSE.txt")
+          @(
+            "Convert includes ffmpeg $env:FFMPEG_VERSION (ffmpeg.exe and ffprobe.exe in this folder), the",
+            "'full' Windows build by Gyan Doshi, licensed under the GNU General Public License version 3.",
+            "Its licence is in FFMPEG-LICENSE.txt.",
+            "",
+            "Source code:",
+            "  ffmpeg:          https://ffmpeg.org/download.html",
+            "  this build:      https://github.com/GyanD/codexffmpeg/releases/tag/$env:FFMPEG_VERSION",
+            "  build recipes:   https://www.gyan.dev/ffmpeg/builds/"
+          ) | Set-Content (Join-Path $dest "FFMPEG-NOTICE.txt") -Encoding utf8
+          if (Get-Command ffmpeg.exe -ErrorAction SilentlyContinue) {
+            Write-Host "Note: an ffmpeg is also on PATH: $((Get-Command ffmpeg.exe).Source)"
+          }
       - name: Build the setup program
         run: |
           windows\build.ps1 -Setup
@@ -84,10 +117,14 @@ jobs:
           $app = Join-Path $env:LOCALAPPDATA "Programs\Convert\Convert.exe"
           if (-not (Test-Path $app)) { Get-Content $log -Tail 60; throw "Convert.exe isn't at $app after the setup program ran" }
           Select-String -Path $log -Pattern "menu|\.NET|dotnet" -SimpleMatch:$false | Select-Object -Last 15 | ForEach-Object { $_.Line }
-      # Without ffmpeg and LibreOffice the smoke test skips (and lists) what needs them; images, PDFs,
-      # fonts and Markdown run with the installed app. windows.yml covers the rest on every change.
+          $tools = Join-Path $env:LOCALAPPDATA "Programs\Convert\tools"
+          foreach ($f in "ffmpeg.exe", "ffprobe.exe", "FFMPEG-LICENSE.txt", "FFMPEG-NOTICE.txt") {
+            if (-not (Test-Path (Join-Path $tools $f))) { throw "$f isn't in $tools after the setup program ran" }
+          }
+      # -Strict: audio and video must work with the bundled ffmpeg. LibreOffice isn't installed, so the
+      # smoke test skips (and lists) Word, ODT and RTF.
       - name: Smoke test the installed app
-        run: windows\smoke-test.ps1 -Exe "$env:LOCALAPPDATA\Programs\Convert\Convert.exe" -Out "$env:RUNNER_TEMP\smoke"
+        run: windows\smoke-test.ps1 -Exe "$env:LOCALAPPDATA\Programs\Convert\Convert.exe" -Out "$env:RUNNER_TEMP\smoke" -Strict
       - name: Uninstall it
         run: |
           $dir = Join-Path $env:LOCALAPPDATA "Programs\Convert"

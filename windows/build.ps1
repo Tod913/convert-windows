@@ -264,13 +264,15 @@ if ($LASTEXITCODE) { throw "Building src\Convert\Convert.csproj failed (exit cod
 if ($LASTEXITCODE) { throw "Building src\Convert.Shell\Convert.Shell.csproj failed (exit code $LASTEXITCODE); see the errors above." }
 Copy-Item -LiteralPath (Join-Path $Root 'packaging\Assets') -Destination (Join-Path $AppOut 'Assets') -Recurse
 
-# A bundled ffmpeg (windows\tools\ffmpeg\ffmpeg.exe + ffprobe.exe) is shipped in tools\ next to Convert.exe.
+# A bundled ffmpeg (windows\tools\ffmpeg\ffmpeg.exe + ffprobe.exe) is shipped in tools\ next to Convert.exe,
+# together with any licence and notice files next to it (ffmpeg's licence requires shipping them).
 $bundled = Join-Path $Root 'tools\ffmpeg'
 if ([IO.File]::Exists((Join-Path $bundled 'ffmpeg.exe'))) {
     Write-Step 'Bundling ffmpeg'
     $toolsOut = Join-Path $AppOut 'tools'
     [void][IO.Directory]::CreateDirectory($toolsOut)
-    Get-ChildItem -LiteralPath $bundled -Filter *.exe -File | Copy-Item -Destination $toolsOut
+    Get-ChildItem -LiteralPath $bundled -File | Where-Object { $_.Extension -in '.exe', '.txt', '' } |
+        Copy-Item -Destination $toolsOut
 }
 
 # --- package manifest --------------------------------------------------------------------------------
