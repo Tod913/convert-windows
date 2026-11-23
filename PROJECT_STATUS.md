@@ -98,8 +98,15 @@ possible, so updates from the original project can still be merged in.
       `OutputFolder.Use(folder)` (AsyncLocal) for the running conversion; a missing or read-only chosen
       folder is an error, not a fallback. `--cli` honours `CONVERT_OUTPUT_DIR`. Passed: new unit tests,
       smoke test `save-to:` section (121 passed, 0 failed). Tested by you 2026-11-23: all modes work.
-- [ ] **Stage 5: Fewer clicks (optional).** A "Convert to ▸ MP3 / MP4 / JPEG …" submenu that converts
-      immediately with your saved settings, without opening the window first.
+- [ ] **Stage 5: Fewer clicks.** Cloud part done 2026-11-23. Classic menu gets "Convert to ▸" with a few
+      formats per kind (`QuickTargets.cs`); a click runs `Convert.exe --quick <id> "%1"`, gathers the
+      selection (own SelectionGate name, 1 s), converts with saved settings + Save to, and the window
+      closes 3 s after success (stays on errors/Stop/fallback or while the pointer is on it).
+      `ClassicMenu.cs` writes/removes the entries (`--register-classic-menu`, `--unregister-classic-menu`);
+      the installer calls it, the uninstaller removes entries in Pascal too. New "Open when done"
+      checkbox (>5 outputs: Explorer instead). Installer script saved as UTF-8 with BOM. Passed: all CI
+      incl. `QuickTargetsTests` and submenu/quick-gather checks. **Waiting on:** you testing it on your PC.
+      Limitation: "Convert to" exists only in the classic menu (top-level needs signing).
 - [ ] **Stage 6: Documents.** Decide how to handle LibreOffice (needed for Word/ODT/RTF): the installer
       offers to download it, or we leave it optional. It's too large (~350 MB) to bundle.
 - [ ] **Stage 7: Release installer.** Name, icon, version, a clean `Convert-x.y-setup.exe` published on
@@ -113,9 +120,8 @@ possible, so updates from the original project can still be merged in.
   - Verified only on GitHub's cloud Windows machines, not yet on a real PC with a screen.
   - Word/ODT/RTF conversions untested (need LibreOffice).
   - Installer size: the "full" ffmpeg build is large. A smaller build could be chosen in Stage 7.
-- **Next step:** choose between Stage 5, 6, 7.
-- **Branches:** `main` = tested work up to Stage 3 (merged 2026-11-23). Stage 4 is on `claude/charming-gates-ppvnla`.
-- **Ideas noted:** optional "Open file when done" setting.
+- **Next step:** you test Stage 5 on your PC; then Stage 6 or 7.
+- **Branches:** `main` = tested work up to Stage 4. Stage 5 is on `claude/charming-gates-ppvnla`.
 
 ### How to re-run the cloud checks
 Claude starts them with the GitHub tools ("run workflow" on `windows.yml` / `windows-setup.yml`).
