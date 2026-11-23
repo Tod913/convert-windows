@@ -151,7 +151,8 @@ public partial class MainWindow : Window
         var warning = vm.Warning;
         WarningRow.Visibility = warning != null ? Visibility.Visible : Visibility.Collapsed;
         WarningText.Text = warning ?? "";
-        TrashBox.Visibility = warning == null && vm.Files.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        OptionsPanel.Visibility = warning == null && vm.Files.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        OpenBox.IsChecked = vm.OpenWhenDone;
         TrashBox.Content = vm.Files.Count > 1 ? "Move originals to Recycle Bin" : "Move original to Recycle Bin";
         TrashBox.IsChecked = vm.TrashOriginals;
         ConvertButton.IsEnabled = vm.CanConvert;
@@ -237,9 +238,21 @@ public partial class MainWindow : Window
         if (!refreshing) vm.TrashOriginals = TrashBox.IsChecked == true;
     }
 
-    private async void Convert_Click(object sender, RoutedEventArgs e)
+    private void OpenBox_Changed(object sender, RoutedEventArgs e)
     {
-        if (vm.Phase != Phase.Idle) return;
+        if (!refreshing) vm.OpenWhenDone = OpenBox.IsChecked == true;
+    }
+
+    private async void Convert_Click(object sender, RoutedEventArgs e) => await ConvertAsync(closeWhenDone: false);
+
+    /// <summary>
+    /// What the Convert button does. <paramref name="closeWhenDone"/> (Convert to ▸ format): the window
+    /// closes by itself a few seconds after everything converted, unless the pointer is on it; it stays
+    /// when there is anything to read (an error, Stop, a file saved elsewhere than asked).
+    /// </summary>
+    public async Task ConvertAsync(bool closeWhenDone)
+    {
+        if (vm.Phase != Phase.Idle || !vm.CanConvert) return;
         string? folder = null;
         if (vm.SaveTo == SaveMode.Folder) folder = vm.SaveFolder;
         else if (vm.SaveTo == SaveMode.Ask)
@@ -251,6 +264,31 @@ public partial class MainWindow : Window
             folder = vm.LastAskedFolder = dialog.FolderName;
         }
         await vm.StartAsync(folder);
+        if (vm.Converted > 0 && vm.OpenWhenDone) OpenOutputs();
+        if (closeWhenDone && vm.Converted > 0 && vm.Errors.Count == 0 && !vm.Stopped && vm.SavedElsewhere == null)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3));
+            if (IsVisible && vm.Phase == Phase.Done && !IsMouseOver) Close();
+        }
+    }
+
+    /// <summary>Opens the outputs in their usual apps; more than five are shown in Explorer instead.</summary>
+    private void OpenOutputs()
+    {
+        var outputs = vm.Outputs.Where(o => File.Exists(o) || Directory.Exists(o)).ToList();
+        if (outputs.Count > 5)
+        {
+            Explorer.ShowFiles(outputs);
+            return;
+        }
+        foreach (var output in outputs)
+        {
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(output) { UseShellExecute = true })?.Dispose(); }
+            catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)
+            {
+                Explorer.ShowFiles([output]); // no app for this kind of file
+            }
+        }
     }
 
     // Save to: next to the original, a chosen folder (shown by name), "Choose a folder…", or ask each time.

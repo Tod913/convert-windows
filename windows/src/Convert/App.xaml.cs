@@ -41,11 +41,24 @@ public partial class App : Application
             return;
         }
 
+        // The classic right-click menu entries, for an unsigned Convert (the installer asks for these).
+        if (args.Length > 0 && args[0] is "--register-classic-menu" or "--unregister-classic-menu")
+        {
+            Cli.Attach();
+            AppExit.Now(args[0] == "--register-classic-menu" ? ClassicMenu.Register() : ClassicMenu.Unregister());
+            return;
+        }
         // From the classic right-click menu and Send to: Explorer may start one Convert per selected
-        // file, so the files are gathered into one window (SelectionGate).
+        // file, so the files are gathered into one window (SelectionGate). --quick <format> converts
+        // them at once, as "Convert to ▸ <format>" does.
         if (args.Length > 1 && args[0] == "--open")
         {
-            OpenGathered(args[1..]);
+            OpenGathered(args[1..], null);
+            return;
+        }
+        if (args.Length > 2 && args[0] == "--quick")
+        {
+            OpenGathered(args[2..], args[1]);
             return;
         }
 
@@ -62,10 +75,14 @@ public partial class App : Application
         new MainWindow(new MainViewModel(files)).Show();
     }
 
-    private void OpenGathered(string[] args)
+    /// <summary>How long a quick conversion waits for the rest of the selection before it starts.</summary>
+    private static readonly TimeSpan QuickGather = TimeSpan.FromSeconds(1);
+
+    private void OpenGathered(string[] args, string? quick)
     {
         var files = args.Select(a => Path.GetFullPath(a.Trim('"'))).ToList();
-        var gate = SelectionGate.Open(files);
+        // A quick conversion gathers only with others of the same format, never into an open window.
+        var gate = SelectionGate.Open(files, SelectionGate.DefaultName + (quick == null ? "" : ".quick." + quick));
         if (gate == null)
         {
             AppExit.Now(0); // another Convert window took them
@@ -76,7 +93,7 @@ public partial class App : Application
         if (Environment.GetEnvironmentVariable("CONVERT_OPEN_REPORT") is { Length: > 0 } report)
         {
             var gathered = new List<string>(files);
-            gate.Listen(more => { lock (gathered) gathered.AddRange(more); return true; });
+            gate.Listen(more => { lock (gathered) gathered.AddRange(more); return true; }, quick == null ? null : QuickGather);
             gate.Completed.ContinueWith(_ =>
             {
                 lock (gathered) File.WriteAllLines(report, gathered);
@@ -101,8 +118,17 @@ public partial class App : Application
                 });
             }
             catch (OperationCanceledException) { return false; } // the app is closing
-        });
+        }, quick == null ? null : QuickGather);
         window.Show();
+
+        // Convert to ▸ format: once the selection is all there, convert it, as if Convert was clicked.
+        if (quick != null)
+            gate.Completed.ContinueWith(_ => Dispatcher.InvokeAsync(async () =>
+            {
+                if (vm.TargetItems.FirstOrDefault(i => i.Target.Id == quick) is not { } item) return; // not for these files
+                vm.Target = item.Target;
+                await window.ConvertAsync(closeWhenDone: true);
+            }));
     }
 
     protected override void OnExit(ExitEventArgs e)

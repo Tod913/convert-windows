@@ -10,6 +10,8 @@ public sealed class SettingsStore
     public Dictionary<string, ConvSettings> Settings { get; set; } = [];
     public bool TrashOriginals { get; set; }
     public bool ShowAdvanced { get; set; }
+    /// <summary>Open the converted files in their usual app when a conversion is done.</summary>
+    public bool OpenWhenDone { get; set; }
     /// <summary>Where converted files go: "beside" the original, the chosen "folder", or "ask" each time.</summary>
     public string SaveTo { get; set; } = "beside";
     public string? SaveFolder { get; set; }

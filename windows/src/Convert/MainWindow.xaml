@@ -101,8 +101,12 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <CheckBox x:Name="TrashBox" VerticalAlignment="Center" Checked="TrashBox_Changed" Unchecked="TrashBox_Changed"
-                          ToolTip="Once a file has converted, its original goes to the Recycle Bin. You can restore it from there." />
+                <StackPanel x:Name="OptionsPanel" VerticalAlignment="Center">
+                    <CheckBox x:Name="TrashBox" Checked="TrashBox_Changed" Unchecked="TrashBox_Changed"
+                              ToolTip="Once a file has converted, its original goes to the Recycle Bin. You can restore it from there." />
+                    <CheckBox x:Name="OpenBox" Content="Open when done" Margin="0,4,0,0" Checked="OpenBox_Changed" Unchecked="OpenBox_Changed"
+                              ToolTip="Opens the converted files in their usual app (more than five: shows them in Explorer instead)." />
+                </StackPanel>
                 <StackPanel x:Name="WarningRow" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
                     <TextBlock FontFamily="{StaticResource IconFont}" Text="&#xE7BA;" VerticalAlignment="Center" Margin="0,0,6,0"
                                Foreground="{DynamicResource SystemFillColorCautionBrush}" />

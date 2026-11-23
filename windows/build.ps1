@@ -377,7 +377,7 @@ function New-SetupProgram {
     }
     # The package travels with the app: Convert.exe --register-menu registers the one next to it.
     Copy-Item -LiteralPath $Msix -Destination (Join-Path $AppOut 'Convert.msix') -Force
-    $isccArgs = @("/DAppVersion=$version", "/DAppDir=$AppOut", "/DOutDir=$Out", "/DMenuExtensions=$($extensions -join ' ')",
+    $isccArgs = @("/DAppVersion=$version", "/DAppDir=$AppOut", "/DOutDir=$Out",
         "/DDotNetVersion=$DesktopRuntimeVersion", "/DDotNetSha256=$($DesktopRuntimeSha256.ToLowerInvariant())", '/Qp')
     if ($SignArguments) {
         # Inno Setup signs the uninstaller and the setup program itself with this command ($q is a quote, $f the file).

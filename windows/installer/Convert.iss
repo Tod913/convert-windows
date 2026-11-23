@@ -1,10 +1,9 @@
-; The setup program for Convert (Inno Setup 6). Built by ..\build.ps1 -Setup, which passes in:
+﻿; The setup program for Convert (Inno Setup 6). Built by ..\build.ps1 -Setup, which passes in:
 ;   AppVersion        0.4.0
 ;   AppDir            the folder with the built app (out\app), Convert.msix included
 ;   OutDir            where the setup program goes
 ;   DotNetVersion     the .NET Desktop Runtime to fetch when the PC has none, e.g. 10.0.15
 ;   DotNetSha256      the SHA-256 of Microsoft's installer for it
-;   MenuExtensions    the file extensions Convert takes, separated by spaces (for the classic menu)
 ;   Sign              defined when the setup program and its uninstaller are to be signed (see /S in build.ps1)
 ;
 ; It installs for the current user only and never asks for administrator rights itself. The one
@@ -186,33 +185,9 @@ end;
 const
   AssociationsKey = 'Software\Classes\SystemFileAssociations';
 
-{ The classic right-click menu entry ("Show more options" on Windows 11, or Shift + right-click), for a
-  Convert whose package Windows won't register because it isn't signed by a trusted publisher. One
-  entry per file type Convert takes, for this user only. Explorer starts Convert once per selected file
-  ("Player" lifts the limit of 15 files); Convert.exe --open gathers them into one window. }
-procedure AddClassicMenu;
-var
-  Rest, Ext, Key, Exe: String;
-  P: Integer;
-begin
-  Exe := ExpandConstant('{app}\Convert.exe');
-  Rest := '{#MenuExtensions} ';
-  while Rest <> '' do
-  begin
-    P := Pos(' ', Rest);
-    Ext := Copy(Rest, 1, P - 1);
-    Delete(Rest, 1, P);
-    if Ext = '' then Continue;
-    Key := AssociationsKey + '\.' + Ext + '\shell\Convert';
-    RegWriteStringValue(HKCU, Key, 'MUIVerb', 'Convert' + #$2026);
-    RegWriteStringValue(HKCU, Key, 'Icon', '"' + Exe + '",0');
-    RegWriteStringValue(HKCU, Key, 'MultiSelectModel', 'Player');
-    RegWriteStringValue(HKCU, Key + '\command', '', '"' + Exe + '" --open "%1"');
-  end;
-end;
-
-{ Removes every classic entry that starts this Convert, including ones for file types an earlier
-  version took, and leaves other programs' entries alone. }
+{ Removes every classic entry ("Convert…" and "Convert to") that starts this Convert, including ones for
+  file types an earlier version took, and leaves other programs' entries alone. Convert.exe
+  --unregister-classic-menu does the same; this works even when .NET is gone. }
 procedure RemoveClassicMenu;
 var
   Names: TArrayOfString;
@@ -227,6 +202,7 @@ begin
     if RegQueryStringValue(HKCU, Key + '\shell\Convert\command', '', Command) and (Pos(Exe, Lowercase(Command)) > 0) then
     begin
       RegDeleteKeyIncludingSubkeys(HKCU, Key + '\shell\Convert');
+      RegDeleteKeyIncludingSubkeys(HKCU, Key + '\shell\ConvertTo');
       RegDeleteKeyIfEmpty(HKCU, Key + '\shell');
       RegDeleteKeyIfEmpty(HKCU, Key);
     end;
@@ -235,7 +211,7 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  Code: Integer;
+  Code, ClassicCode: Integer;
   Shortcut, Reason: String;
 begin
   if CurStep <> ssPostInstall then Exit;
@@ -248,7 +224,9 @@ begin
     DeleteFile(Shortcut);
     Exit;
   end;
-  AddClassicMenu;
+  { The classic menu instead: "Convert…" and "Convert to ▸", added by Convert itself (ClassicMenu.cs). }
+  if not Exec(ExpandConstant('{app}\Convert.exe'), '--register-classic-menu', '', SW_HIDE, ewWaitUntilTerminated, ClassicCode) or (ClassicCode <> 0) then
+    Log('Convert.exe --register-classic-menu failed (code ' + IntToStr(ClassicCode) + ')');
   { Not in the menu: Convert still works when opened, so it at least gets a Start menu entry. }
   CreateShellLink(Shortcut, 'Convert', ExpandConstant('{app}\Convert.exe'), '', ExpandConstant('{app}'), '', 0, SW_SHOWNORMAL);
   if Code = 3 then
@@ -257,8 +235,8 @@ begin
     Reason := 'Windows refused to register it (code ' + IntToStr(Code) + ').';
   Log('Menu registration failed: ' + Reason + ' Added the classic menu entry instead.');
   SuppressibleMsgBox('Convert is installed.' + #13#10#13#10 +
-                     'To convert files, select them in Explorer, right-click and choose Show more options → Convert… ' +
-                     '(or hold Shift while you right-click), or use Send to → Convert.' + #13#10#13#10 +
+                     'To convert files, select them in Explorer, right-click and choose Show more options, then Convert… or Convert to. ' +
+                     '(Hold Shift while you right-click to see them straight away.) Send to has Convert too.' + #13#10#13#10 +
                      'Convert isn''t in the top part of the right-click menu because ' + Reason, mbInformation, MB_OK, IDOK);
 end;
 

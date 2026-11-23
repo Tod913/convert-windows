@@ -75,10 +75,12 @@ public sealed class SelectionGate : IDisposable
 
     /// <summary>
     /// Starts listening. <paramref name="accept"/> is called on a background thread with the files another
-    /// process sent, and answers whether the window took them.
+    /// process sent, and answers whether the window took them. Listening ends after <paramref name="idle"/>
+    /// (default <see cref="IdleTime"/>) without a new file.
     /// </summary>
-    public void Listen(Func<IReadOnlyList<string>, bool> accept)
+    public void Listen(Func<IReadOnlyList<string>, bool> accept, TimeSpan? idle = null)
     {
+        var idleTime = idle ?? IdleTime;
         if (Interlocked.Exchange(ref first, null) is not { } server) return;
         Completed = Task.Run(async () =>
         {
@@ -87,9 +89,9 @@ public sealed class SelectionGate : IDisposable
             {
                 while (true)
                 {
-                    using var idle = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
-                    idle.CancelAfter(IdleTime);
-                    try { await current.WaitForConnectionAsync(idle.Token); }
+                    using var waiting = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
+                    waiting.CancelAfter(idleTime);
+                    try { await current.WaitForConnectionAsync(waiting.Token); }
                     catch (OperationCanceledException) { return; }
                     catch (IOException) { return; }
                     // Before answering: the name must exist at all times while listening.

@@ -132,6 +132,14 @@ jobs:
             if ($command -ne "`"$exe`" --open `"%1`"") { throw "Unexpected command for .${ext}: $command" }
             if ((Get-ItemProperty -LiteralPath $key).MultiSelectModel -ne "Player") { throw "MultiSelectModel isn't Player for .$ext" }
           }
+          # Convert to ▸ (one-click formats): a submenu whose entries run --quick <format>.
+          $quick = "HKCU:\Software\Classes\SystemFileAssociations\.mov\shell\ConvertTo"
+          if ((Get-ItemProperty -LiteralPath $quick -ErrorAction Stop).SubCommands -ne "") { throw "ConvertTo for .mov has no SubCommands value" }
+          $items = @(Get-ChildItem -LiteralPath "$quick\shell" | ForEach-Object { $_.PSChildName })
+          Write-Host "Convert to (.mov): $($items -join ', ')"
+          if (($items -join ",") -ne "01-mp4-h264,02-mp3,03-gif") { throw "Unexpected Convert to entries for .mov" }
+          $mp3 = (Get-ItemProperty -LiteralPath "$quick\shell\02-mp3\command").'(default)'
+          if ($mp3 -ne "`"$exe`" --quick mp3 `"%1`"") { throw "Unexpected quick command: $mp3" }
           $sendTo = Join-Path ([Environment]::GetFolderPath("SendTo")) "Convert.lnk"
           if (-not (Test-Path $sendTo)) { throw "No Send to shortcut at $sendTo" }
           $lnk = (New-Object -ComObject WScript.Shell).CreateShortcut($sendTo)
@@ -153,6 +161,16 @@ jobs:
           $expected = @($names | ForEach-Object { Join-Path $dir $_ } | Sort-Object)
           Write-Host "Gathered: $($gathered -join ' | ')"
           if (($gathered -join "`n") -ne ($expected -join "`n")) { throw "Expected one window with all three files" }
+
+          # Convert to ▸ MP3 for two files: started together, they gather into one conversion, apart from --open's window.
+          $report = Join-Path $env:RUNNER_TEMP "quick.txt"
+          $env:CONVERT_OPEN_REPORT = $report
+          $a = Join-Path $dir "one.mp3"; $b = Join-Path $dir "two.jpg"
+          $procs = @($a, $b) | ForEach-Object { Start-Process $exe -ArgumentList "--quick", "mp3", "`"$_`"" -PassThru }
+          $procs | Wait-Process -Timeout 60
+          $gathered = @(Get-Content $report -Encoding utf8 | Sort-Object)
+          Write-Host "Quick gathered: $($gathered -join ' | ')"
+          if (($gathered -join "`n") -ne ((@($a, $b) | Sort-Object) -join "`n")) { throw "Expected one quick conversion with both files" }
           $env:CONVERT_OPEN_REPORT = $null
       # -Strict: audio and video must work with the bundled ffmpeg. LibreOffice isn't installed, so the
       # smoke test skips (and lists) Word, ODT and RTF.
@@ -169,6 +187,7 @@ jobs:
           for ($i = 0; $i -lt 20 -and (Test-Path (Join-Path $dir "Convert.exe")); $i++) { Start-Sleep -Seconds 1 }
           if (Test-Path (Join-Path $dir "Convert.exe")) { throw "Convert.exe is still in $dir after uninstalling" }
           if (Test-Path "HKCU:\Software\Classes\SystemFileAssociations\.mp4\shell\Convert") { throw "The classic menu entry is still there" }
+          if (Test-Path "HKCU:\Software\Classes\SystemFileAssociations\.mov\shell\ConvertTo") { throw "The Convert to submenu is still there" }
           if (Test-Path (Join-Path ([Environment]::GetFolderPath("SendTo")) "Convert.lnk")) { throw "The Send to shortcut is still there" }
       - name: Keep the setup program
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

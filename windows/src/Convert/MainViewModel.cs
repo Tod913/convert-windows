@@ -92,6 +92,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Changed(nameof(Warning));
     }
 
+    public bool OpenWhenDone
+    {
+        get => store.OpenWhenDone;
+        set { store.OpenWhenDone = value; store.Save(); Changed(); }
+    }
+
     public bool TrashOriginals
     {
         get => store.TrashOriginals;
