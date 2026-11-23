@@ -80,9 +80,10 @@ possible, so updates from the original project can still be merged in.
       code (`main`): "Windows" workflow passed (format check, build, unit tests, smoke test: 113
       conversions passed, 0 failed, 20 skipped because LibreOffice isn't installed on the runner).
       "Windows setup" workflow passed (built the installer, installed it, tested it, uninstalled it).
-- [ ] **Stage 2: First installer you can try.** Claude makes the cloud build produce an installer that
-      includes ffmpeg (with its licence), so audio/video work with no extra installs. You download it,
-      install it on your PC, and try converting from the Start-menu app by dragging files onto it.
+- [ ] **Stage 2: First installer you can try.** Cloud part done 2026-11-23: the "Windows setup" workflow
+      now bundles ffmpeg 9.0.2 (+ licence and source notice) into `tools\` next to `Convert.exe`; the
+      installed app's strict smoke test passed (113 passed, 0 failed, 20 skipped for LibreOffice) using
+      the bundled ffmpeg. Installer is 128 MB (was 16 MB). **Waiting on:** you testing it on your PC.
 - [ ] **Stage 3: Right-click for everyone (option A).** Add a classic "Convert…" right-click entry and
       a "Send to → Convert" entry, installed and removed by the installer, with batches arriving in one
       window. You test it on your PC.
@@ -97,11 +98,14 @@ possible, so updates from the original project can still be merged in.
 
 ## 5. Current state
 
-- **Done:** Stages 0 and 1. GitHub Actions is enabled on the fork. Right-click approach: option A (agreed).
+- **Done:** Stages 0 and 1, Stage 2's cloud part. Right-click approach: option A (agreed).
+  Stage 2 changes are on branch `claude/charming-gates-ppvnla`, not yet merged into `main`.
 - **Known problems / open questions:**
   - Verified only on GitHub's cloud Windows machines, not yet on a real PC with a screen.
   - Word/ODT/RTF conversions untested (need LibreOffice).
-- **Next step:** Stage 2 (installer with ffmpeg included).
+  - Installer size: the "full" ffmpeg build is large. A smaller build could be chosen in Stage 7.
+  - The right-click menu doesn't appear yet with this installer (unsigned); expected until Stage 3.
+- **Next step:** you test the Stage 2 installer on your PC; then Stage 3.
 
 ### How to re-run the cloud checks
 Claude starts them with the GitHub tools ("run workflow" on `windows.yml` / `windows-setup.yml`).
