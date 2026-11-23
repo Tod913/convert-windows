@@ -145,6 +145,8 @@ internal static class Cli
             Console.WriteLine("targets: " + string.Join(" ", Targets.All.Select(t => t.Id)));
             return 2;
         }
+        // Like "Save to" in the window: a folder for all outputs instead of next to each original.
+        if (Environment.GetEnvironmentVariable("CONVERT_OUTPUT_DIR") is { Length: > 0 } outputDir) OutputFolder.Use(outputDir);
         var settings = new ConvSettings();
         if (Environment.GetEnvironmentVariable("CONVERT_SETTINGS") is { Length: > 0 } json)
         {

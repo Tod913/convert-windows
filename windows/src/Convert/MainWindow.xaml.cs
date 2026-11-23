@@ -84,6 +84,7 @@ public partial class MainWindow : Window
             FormatPanel.Visibility = !empty && !mixed && vm.Target != null ? Visibility.Visible : Visibility.Collapsed;
 
             RefreshFormats();
+            RefreshSaveTo();
             RefreshSettings();
             RefreshFooter();
         }
@@ -236,7 +237,68 @@ public partial class MainWindow : Window
         if (!refreshing) vm.TrashOriginals = TrashBox.IsChecked == true;
     }
 
-    private async void Convert_Click(object sender, RoutedEventArgs e) => await vm.StartAsync();
+    private async void Convert_Click(object sender, RoutedEventArgs e)
+    {
+        if (vm.Phase != Phase.Idle) return;
+        string? folder = null;
+        if (vm.SaveTo == SaveMode.Folder) folder = vm.SaveFolder;
+        else if (vm.SaveTo == SaveMode.Ask)
+        {
+            var start = vm.LastAskedFolder is { } last && Directory.Exists(last) ? last : Path.GetDirectoryName(vm.Files.FirstOrDefault());
+            var dialog = new OpenFolderDialog { Title = "Save the converted files in" };
+            if (start != null) dialog.InitialDirectory = start;
+            if (dialog.ShowDialog(this) != true) return;
+            folder = vm.LastAskedFolder = dialog.FolderName;
+        }
+        await vm.StartAsync(folder);
+    }
+
+    // Save to: next to the original, a chosen folder (shown by name), "Choose a folder…", or ask each time.
+
+    private const string Beside = "beside", Folder = "folder", Choose = "choose", Ask = "ask";
+
+    private string? shownSaveFolder = "";
+
+    private void RefreshSaveTo()
+    {
+        if (shownSaveFolder != vm.SaveFolder)
+        {
+            shownSaveFolder = vm.SaveFolder;
+            var list = new List<ComboBoxItem> { new() { Content = "Same folder as the original", Tag = Beside } };
+            if (vm.SaveFolder is { } f)
+                list.Add(new ComboBoxItem { Content = OutputFolder.Name(f), Tag = Folder, ToolTip = f });
+            list.Add(new ComboBoxItem { Content = "Choose a folder…", Tag = Choose });
+            list.Add(new ComboBoxItem { Content = "Ask every time", Tag = Ask });
+            SaveToBox.ItemsSource = list;
+        }
+        var items = (List<ComboBoxItem>)SaveToBox.ItemsSource;
+        var want = vm.SaveTo switch { SaveMode.Folder => Folder, SaveMode.Ask => Ask, _ => Beside };
+        SaveToBox.SelectedItem = items.First(i => (string)i.Tag == want);
+        SaveToBox.ToolTip = vm.SaveTo == SaveMode.Folder ? vm.SaveFolder : null;
+        SaveToBox.IsEnabled = vm.Phase == Phase.Idle;
+    }
+
+    private void SaveToBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (refreshing || SaveToBox.SelectedItem is not ComboBoxItem { Tag: string tag }) return;
+        switch (tag)
+        {
+            case Beside: vm.SaveTo = SaveMode.Beside; break;
+            case Folder: vm.SaveTo = SaveMode.Folder; break;
+            case Ask: vm.SaveTo = SaveMode.Ask; break;
+            // After the list has closed; Refresh also puts the selection back when the dialog is cancelled.
+            case Choose: Dispatcher.InvokeAsync(() => { ChooseSaveFolder(); Refresh(); }); break;
+        }
+    }
+
+    private void ChooseSaveFolder()
+    {
+        var dialog = new OpenFolderDialog { Title = "Save converted files in" };
+        if (vm.SaveFolder is { } f && Directory.Exists(f)) dialog.InitialDirectory = f;
+        if (dialog.ShowDialog(this) != true) return;
+        vm.SaveFolder = dialog.FolderName;
+        vm.SaveTo = SaveMode.Folder;
+    }
     private void Stop_Click(object sender, RoutedEventArgs e) => vm.Cancel();
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
     private void Show_Click(object sender, RoutedEventArgs e) => Explorer.ShowFiles(vm.Outputs);

@@ -655,6 +655,46 @@ try {
     $null = Invoke-Quiet icacls.exe $RO /remove:d "*$Sid"
 }
 
+# --- Chosen output folder --------------------------------------------------------------------
+# "Save to" a folder of the user's choice (CONVERT_OUTPUT_DIR in --cli mode): every output lands there,
+# nothing next to the original, and the app doesn't call it a fallback. One conversion of every kind.
+
+$Chosen = Join-Path $Out "chosen folder – été"
+New-Item -ItemType Directory -Force -Path $Chosen | Out-Null
+foreach ($case in $RoCases) {
+    $name, $target = $case.Split(":")
+    $label = "save-to:$target"
+    $src = Join-Path $Samples $name
+    if (-not (Test-Path -LiteralPath $src)) {
+        Skip-OrFail-Missing $label $name $target
+        continue
+    }
+    if (-not $LibreOffice -and (Test-NeedsLibreOffice $name $target)) {
+        if ($RequireLibreOffice) { Fail $label $name "LibreOffice not installed" } else { Skip $label $name "LibreOffice not installed" }
+        continue
+    }
+    $log = Join-Path $Runs "save-to-$name-$target.log"
+    $beforeHere = @(Get-ChildItem -LiteralPath $Samples -Force).Count
+    $before = @(Get-ChildItem -LiteralPath $Chosen -Force).Count
+    $code = Invoke-Logged $Exe @("--cli", $target, $src) $log @{ CONVERT_OUTPUT_DIR = $Chosen }
+    $after = @(Get-ChildItem -LiteralPath $Chosen -Force).Count
+    $afterHere = @(Get-ChildItem -LiteralPath $Samples -Force).Count
+    $lines = Read-Log $log
+    if ($null -eq $code) {
+        Fail $label $name "timed out after ${TimeoutSec}s"
+    } elseif ($code -ne 0 -or ($lines | Where-Object { $_ -like "FAIL*" })) {
+        Fail $label $name "$(Get-Reason $lines) (exit $code)"
+    } elseif ($after -le $before) {
+        Fail $label $name "nothing was written to the chosen folder"
+    } elseif ($afterHere -ne $beforeHere) {
+        Fail $label $name "something was written next to the original"
+    } elseif ($lines | Where-Object { $_.Contains("saved to ") }) {
+        Fail $label $name "the app called the chosen folder a fallback"
+    } else {
+        Pass $label $name "saved to the chosen folder"
+    }
+}
+
 # Every format the app lists must have been tried by at least one sample.
 foreach ($target in $AllTargets) {
     if (-not $script:Covered.Contains($target)) {

@@ -7,6 +7,8 @@ namespace Convert;
 
 public enum Phase { Idle, Running, Done }
 
+public enum SaveMode { Beside, Folder, Ask }
+
 public sealed record TargetItem(Target Target)
 {
     public string GroupLabel => Target.Group.Label();
@@ -35,7 +37,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public int Converted { get; private set; }
     /// <summary>True while the running conversion can't say how far along it is (one document → PDF, one font).</summary>
     public bool Indeterminate { get; private set; }
-    /// <summary>Set when outputs couldn't go next to their originals (read-only folder) and were saved here instead.</summary>
+    /// <summary>Set when outputs couldn't go where asked (a read-only folder) and were saved here instead.</summary>
     public string? SavedElsewhere { get; private set; }
 
     public MainViewModel(IEnumerable<string> files)
@@ -94,6 +96,26 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         get => store.TrashOriginals;
         set { store.TrashOriginals = value; store.Save(); Changed(); }
+    }
+
+    // Where converted files go
+
+    public SaveMode SaveTo
+    {
+        get => store.SaveTo switch { "folder" when store.SaveFolder != null => SaveMode.Folder, "ask" => SaveMode.Ask, _ => SaveMode.Beside };
+        set { store.SaveTo = value switch { SaveMode.Folder => "folder", SaveMode.Ask => "ask", _ => "beside" }; store.Save(); Changed(); }
+    }
+
+    public string? SaveFolder
+    {
+        get => store.SaveFolder;
+        set { store.SaveFolder = value; store.Save(); Changed(); }
+    }
+
+    public string? LastAskedFolder
+    {
+        get => store.LastAskedFolder;
+        set { store.LastAskedFolder = value; store.Save(); }
     }
 
     public bool ShowAdvanced
@@ -220,9 +242,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Indeterminate = false; SavedElsewhere = null;
     }
 
-    public async Task StartAsync()
+    /// <summary>Converts the files, into <paramref name="folder"/> or (null) next to each original.</summary>
+    public async Task StartAsync(string? folder = null)
     {
         if (target is not { } t || Phase != Phase.Idle || Files.Count == 0) return;
+        OutputFolder.Use(folder);
         Reset();
         runner.Reset();
         Phase = Phase.Running;

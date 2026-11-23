@@ -35,6 +35,70 @@ public sealed class OutputFolderTests : IDisposable
 
     private static void Touch(string path) => File.WriteAllText(path, "x");
 
+    // "Save to" a chosen folder. Async: OutputFolder.Use lasts for the async method it is set in.
+
+    [Fact]
+    public async Task OutputGoesToTheChosenFolder()
+    {
+        await Task.Yield();
+        var input = Original();
+        var chosen = Directory.CreateDirectory(root.File("chosen")).FullName;
+        OutputFolder.Use(chosen);
+        var out_ = Paths.UniqueOutput(input, "jpg", fallback: fallback);
+        Assert.Equal(Path.Combine(chosen, "photo.jpg"), out_);
+        Assert.False(OutputFolder.IsFallback(out_, input));
+        // Two originals with the same name, from different folders, don't collide.
+        Touch(out_);
+        Assert.Equal("photo 2.jpg", Path.GetFileName(Paths.UniqueOutput(input, "jpg", fallback: fallback)));
+        Assert.Equal(Path.Combine(chosen, "photo pages"), Paths.UniqueFolder(input, " pages", fallback: fallback));
+        Assert.Equal(["photo.png"], Directory.GetFiles(source).Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public async Task AChosenFolderIsUsedEvenWhenTheOriginalsFolderIsReadOnly()
+    {
+        await Task.Yield();
+        var input = Original();
+        TestAccess.SetWritable(source, false);
+        var chosen = Directory.CreateDirectory(root.File("chosen")).FullName;
+        OutputFolder.Use(chosen);
+        Assert.Equal(Path.Combine(chosen, "photo.jpg"), Paths.UniqueOutput(input, "jpg", fallback: fallback));
+    }
+
+    [Fact]
+    public async Task AChosenFolderThatIsGoneOrReadOnlyIsAnErrorNotAFallback()
+    {
+        await Task.Yield();
+        var input = Original();
+        OutputFolder.Use(root.File("gone"));
+        var gone = Assert.Throws<ConvertException>(() => Paths.UniqueOutput(input, "jpg", fallback: fallback));
+        Assert.Contains("“gone”", gone.Message);
+
+        var locked = Directory.CreateDirectory(root.File("locked")).FullName;
+        TestAccess.SetWritable(locked, false);
+        try
+        {
+            OutputFolder.Use(locked);
+            var e = Assert.Throws<ConvertException>(() => Paths.UniqueOutput(input, "jpg", fallback: fallback));
+            Assert.Contains("can't be written to", e.Message);
+        }
+        finally { TestAccess.SetWritable(locked, true); }
+        Assert.Empty(Directory.GetFiles(fallback));
+    }
+
+    [Fact]
+    public async Task TheChosenFolderEndsWithTheMethodThatSetIt()
+    {
+        var input = Original();
+        await Task.Run(async () =>
+        {
+            await Task.Yield();
+            OutputFolder.Use(root.File("elsewhere"));
+        });
+        Assert.Null(OutputFolder.Chosen);
+        Assert.Equal(Path.Combine(source, "photo.jpg"), Paths.UniqueOutput(input, "jpg", fallback: fallback));
+    }
+
     [Fact]
     public void OutputGoesNextToTheOriginal()
     {

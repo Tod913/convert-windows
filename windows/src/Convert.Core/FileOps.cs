@@ -6,8 +6,8 @@ public static class FileOps
 {
     /// <summary>
     /// Whether an original may go to the Recycle Bin (which keeps it recoverable): only once its
-    /// finished, separate output sits next to it. Never after Stop, and never when the output had to
-    /// be saved somewhere else, so the original and its conversion don't end up in different places.
+    /// finished, separate output sits next to it, or in the folder the user chose. Never after Stop, and
+    /// never when the output had to be saved somewhere else than asked.
     /// </summary>
     public static bool MayRecycle(string original, IReadOnlyCollection<string> outputs, bool stopped) =>
         !stopped && outputs.Count > 0

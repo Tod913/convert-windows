@@ -2,9 +2,25 @@ using System.Runtime.InteropServices;
 
 namespace Convert.Core;
 
-/// <summary>Where converted files go: next to the original, or a fallback folder when that isn't possible.</summary>
+/// <summary>
+/// Where converted files go: a folder the user chose, or next to the original, or a fallback folder when
+/// the original's folder can't be written to.
+/// </summary>
 public static class OutputFolder
 {
+    private static readonly AsyncLocal<string?> chosen = new();
+
+    /// <summary>The folder the user chose for the conversions running in this flow, or null for next to the original.</summary>
+    public static string? Chosen => chosen.Value;
+
+    /// <summary>
+    /// Sends the outputs of the conversions started from here on in this asynchronous flow to
+    /// <paramref name="folder"/> (null: next to their originals). Set at the start of an async method,
+    /// it ends with that method.
+    /// </summary>
+    public static void Use(string? folder) =>
+        chosen.Value = folder == null ? null : Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
+
     /// <summary>
     /// Used when the original's folder can't be written to (a read-only share, a disc or mounted ISO,
     /// no permission). Downloads; <c>CONVERT_FALLBACK_DIR</c> replaces it for tests.
@@ -26,6 +42,14 @@ public static class OutputFolder
     /// <summary>The folder to write a conversion of <paramref name="input"/> into.</summary>
     public static string For(string input, string? fallback = null)
     {
+        if (chosen.Value is { } folder)
+        {
+            if (!Directory.Exists(folder))
+                throw new ConvertException($"Can't save to “{Name(folder)}”: that folder doesn't exist (any more)");
+            if (!IsWritable(folder))
+                throw new ConvertException($"Can't save to “{Name(folder)}”: that folder can't be written to");
+            return folder;
+        }
         var dir = Path.GetDirectoryName(Path.GetFullPath(input))!;
         if (IsWritable(dir)) return dir;
         fallback ??= Fallback;
@@ -55,9 +79,13 @@ public static class OutputFolder
         }
     }
 
-    /// <summary>Whether <paramref name="output"/> was written somewhere other than next to <paramref name="input"/>.</summary>
+    /// <summary>
+    /// Whether <paramref name="output"/> was written somewhere other than asked: neither next to
+    /// <paramref name="input"/> nor in the folder the user chose.
+    /// </summary>
     public static bool IsFallback(string output, string input) =>
-        !string.Equals(Folder(output), Folder(input), StringComparison.OrdinalIgnoreCase);
+        !string.Equals(Folder(output), Folder(input), StringComparison.OrdinalIgnoreCase)
+        && !(chosen.Value is { } folder && string.Equals(Folder(output), folder, StringComparison.OrdinalIgnoreCase));
 
     private static string Folder(string path) =>
         Path.TrimEndingDirectorySeparator(Path.GetDirectoryName(Path.GetFullPath(path)) ?? "");
