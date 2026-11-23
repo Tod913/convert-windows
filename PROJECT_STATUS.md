@@ -76,9 +76,10 @@ Each stage ends with a test and an update of this file. Changes stay small and i
 possible, so updates from the original project can still be merged in.
 
 - [x] **Stage 0: Investigate** the original project and decide the approach (this document).
-- [ ] **Stage 1: Get the cloud build working on your fork.** You switch on GitHub Actions for your fork
-      (one click, instructions given in chat). Claude runs the existing build and tests and reports
-      honestly what passes and fails.
+- [x] **Stage 1: Get the cloud build working on your fork.** Done 2026-11-23 on the unchanged original
+      code (`main`): "Windows" workflow passed (format check, build, unit tests, smoke test: 113
+      conversions passed, 0 failed, 20 skipped because LibreOffice isn't installed on the runner).
+      "Windows setup" workflow passed (built the installer, installed it, tested it, uninstalled it).
 - [ ] **Stage 2: First installer you can try.** Claude makes the cloud build produce an installer that
       includes ffmpeg (with its licence), so audio/video work with no extra installs. You download it,
       install it on your PC, and try converting from the Start-menu app by dragging files onto it.
@@ -96,10 +97,12 @@ possible, so updates from the original project can still be merged in.
 
 ## 5. Current state
 
-- **Done:** Stage 0.
-- **Working on:** waiting for you to switch on GitHub Actions for your fork (start of Stage 1).
+- **Done:** Stages 0 and 1. GitHub Actions is enabled on the fork. Right-click approach: option A (agreed).
 - **Known problems / open questions:**
-  - Nothing has been run on Windows by us yet; everything in section 1 is from the project's own
-    documentation and code.
-  - Your choice on the right-click approach (section 3). Default plan: option A.
-- **Next step:** Stage 1.
+  - Verified only on GitHub's cloud Windows machines, not yet on a real PC with a screen.
+  - Word/ODT/RTF conversions untested (need LibreOffice).
+- **Next step:** Stage 2 (installer with ffmpeg included).
+
+### How to re-run the cloud checks
+Claude starts them with the GitHub tools ("run workflow" on `windows.yml` / `windows-setup.yml`).
+Results: https://github.com/Tod913/convert-windows/actions
