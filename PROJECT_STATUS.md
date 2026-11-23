@@ -92,12 +92,12 @@ possible, so updates from the original project can still be merged in.
       format, build, unit tests (incl. new `SelectionGateTests`), smoke test, and the setup workflow's
       new checks (entries exist, 3 files via the shell verb land in one window, removed on uninstall).
       Tested by you 2026-11-23: single file, Shift+right-click, multi-select (one window), Send to all work.
-- [ ] **Stage 4: Choose where files are saved.** Cloud part done 2026-11-23. "Save to" row in the
+- [x] **Stage 4: Choose where files are saved.** Cloud part done 2026-11-23. "Save to" row in the
       window: same folder as the original (default) / a chosen folder (remembered) / "Choose a folder…" /
       "Ask every time". Stored in settings.json (`saveTo`, `saveFolder`, `lastAskedFolder`). Core:
       `OutputFolder.Use(folder)` (AsyncLocal) for the running conversion; a missing or read-only chosen
       folder is an error, not a fallback. `--cli` honours `CONVERT_OUTPUT_DIR`. Passed: new unit tests,
-      smoke test `save-to:` section (121 passed, 0 failed). **Waiting on:** you testing it on your PC.
+      smoke test `save-to:` section (121 passed, 0 failed). Tested by you 2026-11-23: all modes work.
 - [ ] **Stage 5: Fewer clicks (optional).** A "Convert to ▸ MP3 / MP4 / JPEG …" submenu that converts
       immediately with your saved settings, without opening the window first.
 - [ ] **Stage 6: Documents.** Decide how to handle LibreOffice (needed for Word/ODT/RTF): the installer
@@ -113,7 +113,7 @@ possible, so updates from the original project can still be merged in.
   - Verified only on GitHub's cloud Windows machines, not yet on a real PC with a screen.
   - Word/ODT/RTF conversions untested (need LibreOffice).
   - Installer size: the "full" ffmpeg build is large. A smaller build could be chosen in Stage 7.
-- **Next step:** you test Stage 4 on your PC; then Stage 5.
+- **Next step:** choose between Stage 5, 6, 7.
 - **Branches:** `main` = tested work up to Stage 3 (merged 2026-11-23). Stage 4 is on `claude/charming-gates-ppvnla`.
 - **Ideas noted:** optional "Open file when done" setting.
 
