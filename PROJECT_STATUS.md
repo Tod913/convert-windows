@@ -109,7 +109,6 @@ possible, so updates from the original project can still be merged in.
   - Verified only on GitHub's cloud Windows machines, not yet on a real PC with a screen.
   - Word/ODT/RTF conversions untested (need LibreOffice).
   - Installer size: the "full" ffmpeg build is large. A smaller build could be chosen in Stage 7.
-  - The right-click menu doesn't appear yet with this installer (unsigned); expected until Stage 3.
 - **Next step:** Stage 4 (choose where converted files are saved).
 - **Ideas noted:** optional "Open file when done" setting.
 
