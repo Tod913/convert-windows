@@ -11,6 +11,11 @@ on:
     branches: [main]
     paths: ['.github/workflows/windows-setup.yml', 'windows/build.ps1', 'windows/installer/**']
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish a release on the Releases page (only after every check below has passed)"
+        type: boolean
+        default: false
 
 concurrency:
   group: windows-setup-${{ github.event.pull_request.number || github.ref }}
@@ -226,3 +231,30 @@ jobs:
             ${{ runner.temp }}/smoke
           retention-days: 7
           if-no-files-found: ignore
+
+  # Run from the Actions tab with "release" ticked: publishes the tested setup program as a release named
+  # after the version in windows/Directory.Build.props, with the notes in windows/installer/release-notes.md.
+  release:
+    name: publish-release
+    needs: setup
+    if: github.event_name == 'workflow_dispatch' && inputs.release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write   # to create the release
+      actions: read     # to fetch the setup program the job above kept
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Publish the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name convert-windows-setup --dir dist
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' windows/Directory.Build.props)
+          ls -l dist
+          test -f "dist/Convert-$version-setup.exe" || { echo "No dist/Convert-$version-setup.exe"; exit 1; }
+          gh release create "v$version" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Convert for Windows $version" --notes-file windows/installer/release-notes.md

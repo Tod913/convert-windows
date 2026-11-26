@@ -116,6 +116,8 @@ Convert for Windows is based on [Convert](https://github.com/newtonstudios/conve
 Sena and contributors, and its Windows port. Both are under the [MIT license](LICENSE), and so is this
 repository.
 
+Code signing policy: [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md).
+
 The installer includes [ffmpeg](https://ffmpeg.org) (the [Windows build by Gyan
 Doshi](https://www.gyan.dev/ffmpeg/builds/)), which is licensed under the GPL version 3. Its license and where
 to get its source code are in the `tools` folder next to `Convert.exe`.

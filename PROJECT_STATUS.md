@@ -130,6 +130,14 @@ possible, so updates from the original project can still be merged in.
   and in the original repo. New Windows README on the front page; contributing guide, security policy, issue and
   PR templates rewritten for this repo; windows/README.md is now the developer guide; ARCHITECTURE.md covers the
   classic menu, quick formats, Save to and desktop icons.
+- **Defender warning (2026-11-26):** you reported "contains a virus" when installing the artifact (newest
+  build). Likely a false positive (unsigned, new, downloads .NET, registers menus, moves desktop icons).
+  Waiting on: the threat name and file from Windows Security → Protection history; then submit to Microsoft.
+- **Code signing:** chosen route = SignPath Foundation (free for open source). Prepared: CODE_SIGNING_POLICY.md
+  (linked from README), version 0.5.0, a "release" option on the Windows setup workflow (publishes the tested
+  installer to Releases), windows/installer/release-notes.md. To do: you enable GitHub two-step login and apply
+  at signpath.org; after approval, wire SignPath signing into the workflow (sign app files + package before
+  Inno Setup, then the setup program; the package publisher must match the certificate's subject).
 - **Next step:** you test Stage 5 on your PC; then Stage 6 or 7.
 - **Branches:** `main` = tested work up to Stage 4. Stage 5 is on `claude/charming-gates-ppvnla`.
 
