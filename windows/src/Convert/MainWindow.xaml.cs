@@ -264,13 +264,40 @@ public partial class MainWindow : Window
             folder = vm.LastAskedFolder = dialog.FolderName;
         }
         await vm.StartAsync(folder);
+        await DesktopIcons.PlaceAsync(vm.Made);
         if (vm.Converted > 0 && vm.OpenWhenDone) OpenOutputs();
-        if (closeWhenDone && vm.Converted > 0 && vm.Errors.Count == 0 && !vm.Stopped && vm.SavedElsewhere == null)
+        if (!closeWhenDone) return;
+        if (vm.Converted == 0 || vm.Errors.Count > 0 || vm.Stopped || vm.SavedElsewhere != null)
         {
-            await Task.Delay(TimeSpan.FromSeconds(3));
-            if (IsVisible && vm.Phase == Phase.Done && !IsMouseOver) Close();
+            Log.Write($"quick: stays open (converted {vm.Converted}, errors {vm.Errors.Count}, stopped {vm.Stopped}, saved elsewhere {vm.SavedElsewhere != null})");
+            return;
         }
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        // Not while somebody is reading it: the pointer on the window keeps it open until it moves off.
+        while (IsVisible && vm.Phase == Phase.Done && PointerOnWindow()) await Task.Delay(500);
+        Log.Write($"quick: done, closing (visible {IsVisible}, phase {vm.Phase})");
+        if (IsVisible && vm.Phase == Phase.Done) Close();
     }
+
+    /// <summary>
+    /// Where the pointer really is now. WPF's IsMouseOver only changes when the window sees the mouse
+    /// move, so it can stay true after the pointer has gone elsewhere.
+    /// </summary>
+    private bool PointerOnWindow()
+    {
+        if (!GetCursorPos(out var at)) return false;
+        var p = PointFromScreen(new Point(at.X, at.Y));
+        return p.X >= 0 && p.Y >= 0 && p.X < ActualWidth && p.Y < ActualHeight;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct CursorPoint
+    {
+        public int X, Y;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out CursorPoint point);
 
     /// <summary>Opens the outputs in their usual apps; more than five are shown in Explorer instead.</summary>
     private void OpenOutputs()

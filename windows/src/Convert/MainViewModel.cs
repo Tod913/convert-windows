@@ -31,6 +31,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public double Progress { get; private set; }
     public string CurrentName { get; private set; } = "";
     public List<string> Outputs { get; } = [];
+    /// <summary>Each output with the original it was made from.</summary>
+    public List<(string Original, string Output)> Made { get; } = [];
     public ObservableCollection<string> Errors { get; } = [];
     public bool Stopped { get; private set; }
     public int Trashed { get; private set; }
@@ -244,7 +246,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     private void Reset()
     {
-        Phase = Phase.Idle; Outputs.Clear(); Errors.Clear(); Progress = 0; Stopped = false; Trashed = 0; Converted = 0;
+        Phase = Phase.Idle; Outputs.Clear(); Made.Clear(); Errors.Clear(); Progress = 0; Stopped = false; Trashed = 0; Converted = 0;
         Indeterminate = false; SavedElsewhere = null;
     }
 
@@ -283,6 +285,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             {
                 var made = await Converter.ConvertAsync(file, t, s, runner, ((IProgress<double>)progress).Report);
                 Outputs.AddRange(made);
+                Made.AddRange(made.Select(m => (file, m)));
                 Converted++;
                 if (made.FirstOrDefault(m => OutputFolder.IsFallback(m, file)) is { } moved)
                     SavedElsewhere = Path.GetDirectoryName(moved);

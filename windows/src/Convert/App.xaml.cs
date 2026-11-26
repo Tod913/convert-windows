@@ -125,7 +125,12 @@ public partial class App : Application
         if (quick != null)
             gate.Completed.ContinueWith(_ => Dispatcher.InvokeAsync(async () =>
             {
-                if (vm.TargetItems.FirstOrDefault(i => i.Target.Id == quick) is not { } item) return; // not for these files
+                Log.Write($"quick {quick}: {vm.Files.Count} file(s) gathered");
+                if (vm.TargetItems.FirstOrDefault(i => i.Target.Id == quick) is not { } item)
+                {
+                    Log.Write($"quick {quick}: not a format for these files; waiting for a choice");
+                    return;
+                }
                 vm.Target = item.Target;
                 await window.ConvertAsync(closeWhenDone: true);
             }));

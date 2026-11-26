@@ -172,6 +172,24 @@ jobs:
           Write-Host "Quick gathered: $($gathered -join ' | ')"
           if (($gathered -join "`n") -ne ((@($a, $b) | Sort-Object) -join "`n")) { throw "Expected one quick conversion with both files" }
           $env:CONVERT_OPEN_REPORT = $null
+      # Convert to ▸ MP3 for real, on a file on the desktop: it converts, puts the MP3 next to the
+      # original and closes its window by itself. The pointer is moved out of the way first.
+      - name: Quick conversion closes by itself
+        run: |
+          $exe = Join-Path $env:LOCALAPPDATA "Programs\Convert\Convert.exe"
+          $desktop = [Environment]::GetFolderPath("Desktop")
+          $wav = Join-Path $desktop "quick test.wav"
+          & (Join-Path $env:LOCALAPPDATA "Programs\Convert\tools\ffmpeg.exe") -v error -f lavfi -i "sine=frequency=440:duration=1" $wav
+          Add-Type -Namespace Native -Name Cursor -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);'
+          [Native.Cursor]::SetCursorPos(0, 0) | Out-Null
+          $log = Join-Path $env:LOCALAPPDATA "Convert\convert.log"
+          $p = Start-Process $exe -ArgumentList "--quick", "mp3", "`"$wav`"" -PassThru
+          $closed = $p.WaitForExit(60000)
+          if (Test-Path $log) { Get-Content $log }
+          if (-not $closed) { Stop-Process -Id $p.Id -Force; throw "The quick conversion's window didn't close by itself within 60 s" }
+          $mp3 = Join-Path $desktop "quick test.mp3"
+          if (-not (Test-Path $mp3)) { throw "No $mp3 next to the original" }
+          Remove-Item $wav, $mp3
       # -Strict: audio and video must work with the bundled ffmpeg. LibreOffice isn't installed, so the
       # smoke test skips (and lists) Word, ODT and RTF.
       - name: Smoke test the installed app
