@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time. The more exact you are, the faster this gets fixed.
-        Found a security problem? Please don't report it here; see the [security policy](https://github.com/newtonstudios/convert/security/policy).
+        Found a security problem? Please don't report it here; see the [security policy](https://github.com/Tod913/convert-windows/security/policy).
   - type: textarea
     id: what-happened
     attributes:
@@ -26,26 +26,16 @@ body:
     id: convert-version
     attributes:
       label: Convert version
-      description: In the menu bar, Convert → About Convert.
+      description: Settings → Apps → Installed apps, next to Convert.
       placeholder: "0.4"
     validations:
       required: true
   - type: input
-    id: macos-version
+    id: windows-version
     attributes:
-      label: macOS version
-      description: Apple menu → About This Mac.
-      placeholder: macOS 15.5
-    validations:
-      required: true
-  - type: dropdown
-    id: mac
-    attributes:
-      label: Which kind of Mac?
-      options:
-        - Apple Silicon (M1 or later)
-        - Intel
-        - Not sure
+      label: Windows version
+      description: Start → Settings → System → About, under "Windows specifications".
+      placeholder: Windows 11 24H2
     validations:
       required: true
   - type: dropdown
@@ -53,7 +43,9 @@ body:
     attributes:
       label: How did you start the conversion?
       options:
-        - Right-click in Finder (Quick Action)
+        - Right-click → Convert to ▸ (a format)
+        - Right-click → Convert…
+        - Send to → Convert
         - Dragged the file onto the window
         - Command line (--cli)
     validations:
@@ -61,8 +53,8 @@ body:
   - type: input
     id: tools
     attributes:
-      label: ffmpeg version (for audio and video)
-      description: Run `ffmpeg -version` in Terminal and paste the first line. Leave empty if it isn't installed or isn't involved.
+      label: LibreOffice installed? (for Word, ODT and RTF)
+      description: Only for document conversions. Leave empty otherwise.
     validations:
       required: false
   - type: textarea

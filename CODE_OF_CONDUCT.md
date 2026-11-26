@@ -62,7 +62,7 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement
 through GitHub's **Report content** option on the comment, issue or pull request
 concerned, or in private with the form at
-https://github.com/newtonstudios/convert/security/advisories/new
+this repository's **Security** tab → **Report a vulnerability**
 (only the maintainers can read it; say that it is a conduct report).
 All complaints will be reviewed and investigated promptly and fairly.
 

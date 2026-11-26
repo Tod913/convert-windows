@@ -23,7 +23,7 @@ AppName=Convert
 AppVersion={#AppVersion}
 AppVerName=Convert {#AppVersion}
 AppPublisher=Convert contributors
-AppPublisherURL=https://github.com/newtonstudios/convert
+AppPublisherURL=https://github.com/Tod913/convert-windows
 VersionInfoVersion={#AppVersion}
 ; The folder is fixed: the right-click menu entry is registered for exactly this place.
 DefaultDirName={localappdata}\Programs\Convert

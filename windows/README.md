@@ -1,13 +1,20 @@
-# Convert for Windows
+# Convert for Windows: building, testing and releasing
 
-The Windows version of Convert. Right-click files in Explorer → **Convert…** → pick a format → the new
-file lands next to the original. Everything runs on your PC; nothing is uploaded.
+What the app does, and how people install it, is in the [main README](../README.md). This page is for
+working on the code; [ARCHITECTURE.md](ARCHITECTURE.md) explains how it fits together.
 
-It sits directly in the Windows 11 context menu (not under "Show more options"), and the window follows
-your light or dark theme and accent colour.
+It started as the Windows port of the Mac app [Convert](https://github.com/newtonstudios/convert) at version
+0.4, which is still the reference for formats, IDs and defaults; see
+[Differences from the Mac app](#differences-from-the-mac-app).
 
-It does what the Mac app does at version 0.4 (see the [main README](../README.md) for the formats and
-settings), with the differences listed under [Differences from the Mac app](#differences-from-the-mac-app).
+**Two ways into Explorer's right-click menu.** A *signed* Convert (`-Install`, or `-Setup` with a code-signing
+certificate) registers a sparse package and sits in the top part of the Windows 11 menu. An *unsigned* one,
+like the setup program CI builds, gets classic entries instead ("Show more options"): **Convert…**,
+**Convert to ▸** a few common formats, and **Send to → Convert**.
+
+**The setup program CI builds** (`.github/workflows/windows-setup.yml`, run it from the Actions tab) bundles
+ffmpeg, installs itself on the runner, checks the menu entries, runs the smoke test against the installed app
+and uninstalls again. Its result is kept for 30 days as the `convert-windows-setup` artifact.
 
 ## Requirements
 
@@ -103,10 +110,7 @@ seen often yet; that goes away as more people install it.
 
 ## Privacy
 
-Convert has no network code, no analytics and no update check. It reads the files you give it and
-writes the converted files next to them (or to Downloads, when their folder is read-only).
-
-Converting a document never touches the network either. Pictures, fonts and styles a document links to
+The main README has the summary. In detail: converting a document never touches the network. Pictures, fonts and styles a document links to
 on the web or on a network share are left out; only files in the document's own folder are used. Local
 pictures are embedded in Word and OpenDocument output instead of linked, and converted files don't
 contain the original's folder or your user name.

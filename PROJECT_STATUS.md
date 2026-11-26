@@ -125,6 +125,11 @@ possible, so updates from the original project can still be merged in.
   - Verified only on GitHub's cloud Windows machines, not yet on a real PC with a screen.
   - Word/ODT/RTF conversions untested (need LibreOffice).
   - Installer size: the "full" ffmpeg build is large. A smaller build could be chosen in Stage 7.
+- **Repository tidy-up (2026-11-26):** removed the Mac app (Sources/, Tests/, Package.swift, build.sh,
+  Resources/, tools/, scripts/, .swift-format, the macOS CI workflow, the Mac screenshot); still in Git history
+  and in the original repo. New Windows README on the front page; contributing guide, security policy, issue and
+  PR templates rewritten for this repo; windows/README.md is now the developer guide; ARCHITECTURE.md covers the
+  classic menu, quick formats, Save to and desktop icons.
 - **Next step:** you test Stage 5 on your PC; then Stage 6 or 7.
 - **Branches:** `main` = tested work up to Stage 4. Stage 5 is on `claude/charming-gates-ppvnla`.
 

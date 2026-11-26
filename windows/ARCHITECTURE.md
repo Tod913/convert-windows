@@ -3,9 +3,10 @@
 Notes for people changing the code. What the app does for its users is in the [main README](../README.md)
 and in [README.md](README.md) next to this file.
 
-The Mac app in `Sources/Convert/` is the original and the specification: target IDs, labels, defaults,
-option ranges, error texts and the order of things come from there. The two apps share behaviour, not
-code. Where Windows can't do something the Mac does, the format is hidden at runtime rather than
+The Mac app ([newtonstudios/convert](https://github.com/newtonstudios/convert), `Sources/Convert/`; not in this
+repository) is the original and the specification: target IDs, labels, defaults, option ranges, error texts and
+the order of things come from there, and the "Mac counterpart" files below and in code comments are in that
+repository. The two apps share behaviour, not code. Where Windows can't do something the Mac does, the format is hidden at runtime rather than
 offered and failing, and the difference is listed in the README.
 
 ## The projects
@@ -191,3 +192,37 @@ Windows deleted it after all. An original is only recycled when its finished out
   external location, and `--unregister-menu` removes it and ends the `dllhost.exe` that holds the files
   (`ShellMenu.cs`).
 - `Convert.Shell` is a .NET comhost, so the .NET 10 runtime must be installed.
+
+## The classic menu, for an unsigned Convert
+
+Windows only registers the package when it trusts the signature. When it doesn't, the setup program runs
+`Convert.exe --register-classic-menu` (`ClassicMenu.cs`), which writes, for this user only and for every
+extension in `MediaKinds.cs`, `HKCU\Software\Classes\SystemFileAssociations\.<ext>\shell\`:
+
+- `Convert` ("Convert…"): `Convert.exe --open "%1"`, the window.
+- `ConvertTo` ("Convert to ▸"): a submenu (`SubCommands` and a `shell` key) with the few formats
+  `QuickTargets.cs` lists for that kind of file, minus the one it is already in; each runs
+  `Convert.exe --quick <id> "%1"`.
+
+Both use `MultiSelectModel=Player`, so a selection of any size is offered, but Explorer starts Convert once
+per file. `SelectionGate` (Core) gathers them: the first process creates a named pipe (only it can, through
+`FirstPipeInstance`; only this user can connect, through `CurrentUserOnly`) and opens the window; the others
+send their paths and end. A quick conversion uses a gate of its own per format, waits a second for the rest of
+the selection, converts with the saved settings and closes its window three seconds after a clean finish,
+not while the pointer is on it. What it decided goes to `%LOCALAPPDATA%\Convert\convert.log`.
+Send to → Convert is a shortcut that runs `Convert.exe --open` with all the files at once.
+
+The uninstaller removes every entry that starts this `Convert.exe` (in Pascal, so it works even when .NET
+is gone), and a signed install removes them in favour of the package.
+
+## Where outputs go
+
+"Save to" in the window is next to the original, a chosen folder, or a folder asked for at each
+conversion. `OutputFolder.Use(folder)` sets it for the conversion that's running (an `AsyncLocal`, so
+nothing else needs to know); `OutputFolder.For` then returns that folder, and an output there doesn't count
+as a fallback. A chosen folder that's gone or read-only is an error, never a silent fallback. `--cli` takes
+`CONVERT_OUTPUT_DIR`.
+
+When an original and its output are both on the desktop, `DesktopIcons.cs` moves the new icon to the first
+free place below the original's, through the desktop's `IFolderView` (found via `IShellWindows`), unless the
+desktop arranges its icons by itself.

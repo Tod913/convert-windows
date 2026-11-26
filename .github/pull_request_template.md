@@ -12,6 +12,6 @@
 
 <!-- What you ran and what you tried by hand. -->
 
-- [ ] `scripts/check.sh` passes on my Mac
+- [ ] `windows\check.ps1` passes on my PC, or CI is green
 - [ ] I tried it in the app (when the change affects what people see)
 - [ ] The README is updated (when formats or behavior changed)

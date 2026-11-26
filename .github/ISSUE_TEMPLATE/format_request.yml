@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         One request per issue, please: it's much easier to answer "MKV to MP4" than a list of ten formats.
-        Worth a look first: the [known limitations](https://github.com/newtonstudios/convert#known-limitations) in the README.
+        Worth a look first: the [known limitations](https://github.com/Tod913/convert-windows#known-limitations) in the README.
   - type: textarea
     id: what
     attributes:

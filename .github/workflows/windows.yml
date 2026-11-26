@@ -40,7 +40,7 @@ defaults:
 jobs:
   format:
     name: windows-format
-    # Pinned rather than windows-latest, like ci.yml's macos-26, so the image (and what's
+    # Pinned rather than windows-latest, so the image (and what's
     # preinstalled on it) only changes when we bump it.
     runs-on: windows-2025
     timeout-minutes: 30
