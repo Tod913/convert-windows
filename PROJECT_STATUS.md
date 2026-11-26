@@ -105,7 +105,12 @@ possible, so updates from the original project can still be merged in.
       `ClassicMenu.cs` writes/removes the entries (`--register-classic-menu`, `--unregister-classic-menu`);
       the installer calls it, the uninstaller removes entries in Pascal too. New "Open when done"
       checkbox (>5 outputs: Explorer instead). Installer script saved as UTF-8 with BOM. Passed: all CI
-      incl. `QuickTargetsTests` and submenu/quick-gather checks. **Waiting on:** you testing it on your PC.
+      incl. `QuickTargetsTests` and submenu/quick-gather checks. Tested by you 2026-11-26: Convert to works and
+      closes by itself. Follow-up 2026-11-26: desktop icons — a converted file's icon is placed right below
+      its original's (`DesktopIcons.cs`, IFolderView; skipped when the desktop auto-arranges); the quick
+      window checks the real pointer position (GetCursorPos) before closing; `%LOCALAPPDATA%\Convert\convert.log`
+      records why a quick window stayed open. CI runs a real Convert to MP3 on a desktop file and requires
+      the window to close by itself (passed). **Waiting on:** you testing desktop placement.
       Limitation: "Convert to" exists only in the classic menu (top-level needs signing).
 - [ ] **Stage 6: Documents.** Decide how to handle LibreOffice (needed for Word/ODT/RTF): the installer
       offers to download it, or we leave it optional. It's too large (~350 MB) to bundle.
