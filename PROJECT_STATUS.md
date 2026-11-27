@@ -155,7 +155,13 @@ possible, so updates from the original project can still be merged in.
     loads ImageMagick. ReadyToRun was tried and removed: no faster start, +1.7 MB.
   - Measured on one GitHub runner, v0.5.0 → this build: setup 128.1 → 45.5 MB; installed 499 → 265 MB;
     start (MP3) 628 → 405 ms; start (photo) 585 → 467 ms; hand over a file 332 → 106 ms;
-    1 s video 885 → 502 ms. All 121 smoke conversions pass. Version bumped to 0.5.1 (not yet released).
+    1 s video 885 → 502 ms. All 121 smoke conversions pass. Released as v0.5.1 on 2026-11-27 (47.7 MB setup).
+- **SignPath application (2026-11-27):** v0.5.1 published; README Install section and release notes
+  mention SignPath Foundation signing (required on the Download URL page). Form answers given in chat
+  (Download URL = README#install, Privacy = CODE_SIGNING_POLICY.md#privacy-policy, Maintainer: Individual,
+  Build system: GitHub Actions). Waiting on: you submitting it, then SignPath's review. After approval: org ID,
+  project slug, signing-policy slugs from SignPath; API token stored as GitHub secret SIGNPATH_API_TOKEN (never
+  in chat); then wire two signing rounds into windows-setup.yml (app files + MSIX, then the setup program).
 - **Next step:** you test Stage 5 on your PC; then Stage 6 or 7.
 - **Branches:** `main` = tested work up to Stage 4. Stage 5 is on `claude/charming-gates-ppvnla`.
 
