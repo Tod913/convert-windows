@@ -8,6 +8,9 @@
     <StartupObject>Convert.Program</StartupObject>
     <!-- Nothing in the app reads these at run time. -->
     <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
+    <!-- Compiled to machine code ahead of time, so a start doesn't wait for the JIT: about 1.7 MB more to
+         download. Only for the released app (dotnet publish); builds and tests are unaffected. -->
+    <PublishReadyToRun>true</PublishReadyToRun>
     <ApplicationIcon>..\..\packaging\Assets\Convert.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- WPF's Fluent theme (ThemeMode) is still flagged as experimental. -->

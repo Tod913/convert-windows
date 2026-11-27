@@ -30,9 +30,17 @@ public static class ImageConv
         if (id == "heic") return WindowsHeif.Available;
         return writable.GetOrAdd(id, static id =>
         {
+            // Asked when a window for pictures opens, and asking means loading ImageMagick (a few tenths of a
+            // second). The answer only changes with ImageMagick itself, so it's kept for this copy of it.
+            var stamp = Tools.Stamp(typeof(MagickFormatInfo).Assembly.Location);
+            var kept = Kept.Read("formats.txt", stamp) ?? [];
+            if (kept.FirstOrDefault(line => line.StartsWith(id + "=", StringComparison.Ordinal)) is { } known) return known.EndsWith("=1", StringComparison.Ordinal);
             Setup();
-            try { return MagickFormatInfo.Create(FormatFor(id))?.SupportsWriting == true; }
-            catch (Exception e) when (e is MagickException or ConvertException) { return false; }
+            bool can;
+            try { can = MagickFormatInfo.Create(FormatFor(id))?.SupportsWriting == true; }
+            catch (Exception e) when (e is MagickException or ConvertException) { can = false; }
+            lock (writable) Kept.Write("formats.txt", stamp, (Kept.Read("formats.txt", stamp) ?? []).Append($"{id}={(can ? 1 : 0)}").Distinct());
+            return can;
         });
     }
 
@@ -259,10 +267,13 @@ public static class WindowsHeif
     {
         try
         {
-            ImageConv.Setup();
-            using var probe = new MagickImage(MagickColors.Gray, 64, 64);
+            // A small grey picture made here rather than by ImageMagick: this is asked when a window for
+            // pictures opens, and loading ImageMagick just for this would slow every one of them down.
+            // Asked anew each time: the Store extensions can be installed at any moment.
+            var grey = new byte[64 * 64 * 4];
+            Array.Fill(grey, (byte)128);
             using var encoded = new MemoryStream();
-            Write(probe, encoded, 0.5);
+            Task.Run(() => EncodeAsync(grey, 64, 64, encoded, 0.5)).GetAwaiter().GetResult();
             return encoded.Length > 0;
         }
         catch (Exception) { return false; }
@@ -288,7 +299,12 @@ public static class WindowsHeif
             pixels = copy.GetPixels().ToByteArray(PixelMapping.BGRA)
                      ?? throw new ConvertException("Couldn't read the image pixels");
         }
+        await EncodeAsync(pixels, w, h, output, quality);
+    }
 
+    /// <summary>Encodes BGRA8 pixels (straight alpha) as HEIC.</summary>
+    private static async Task EncodeAsync(byte[] pixels, uint w, uint h, Stream output, double quality)
+    {
         using var stream = new InMemoryRandomAccessStream();
         var options = new BitmapPropertySet
         {

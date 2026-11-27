@@ -199,8 +199,6 @@ public static class HardwareEncoder
     private static string? detectedFor;
     private static string? vendor;
     private static readonly TimeSpan KeepFor = TimeSpan.FromDays(1);
-    private static readonly string FilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Convert", "gpu.txt");
 
     /// <summary>"nvenc", "qsv", "amf" or null (software).</summary>
     public static string? Vendor
@@ -213,8 +211,12 @@ public static class HardwareEncoder
             {
                 if (detectedFor != stamp)
                 {
-                    if (Remembered(stamp) is { } known) vendor = known.Length > 0 ? known : null;
-                    else Remember(stamp, vendor = Detect(ff));
+                    if (Kept.Read("gpu.txt", stamp, KeepFor) is [var known]) vendor = known.Length > 0 ? known : null;
+                    else
+                    {
+                        vendor = Detect(ff);
+                        Kept.Write("gpu.txt", stamp, [vendor ?? ""]); // "": none, software
+                    }
                     detectedFor = stamp;
                 }
                 return vendor;
@@ -229,32 +231,7 @@ public static class HardwareEncoder
     public static void Forget()
     {
         lock (gate) detectedFor = null;
-        Paths.TryDelete(FilePath);
-    }
-
-    /// <summary>The vendor kept for this ffmpeg ("" for none), or null when there's no answer from today.</summary>
-    private static string? Remembered(string stamp)
-    {
-        try
-        {
-            var lines = File.ReadAllLines(FilePath);
-            if (lines.Length < 3 || lines[0] != stamp || !long.TryParse(lines[2], CultureInfo.InvariantCulture, out var ticks)) return null;
-            var age = DateTime.UtcNow - new DateTime(ticks, DateTimeKind.Utc);
-            return age >= TimeSpan.Zero && age < KeepFor ? lines[1] : null;
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
-    }
-
-    private static void Remember(string stamp, string? found)
-    {
-        try
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            var tmp = $"{FilePath}.{Environment.ProcessId}.tmp";
-            File.WriteAllLines(tmp, [stamp, found ?? "", DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture)]);
-            File.Move(tmp, FilePath, overwrite: true);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        Kept.Forget("gpu.txt");
     }
 
     private static string? Detect(string ff)

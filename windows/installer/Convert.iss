@@ -81,6 +81,7 @@ Type: files; Name: "{localappdata}\Convert\shell.log"
 Type: files; Name: "{localappdata}\Convert\convert.log"
 Type: files; Name: "{localappdata}\Convert\encoders.txt"
 Type: files; Name: "{localappdata}\Convert\gpu.txt"
+Type: files; Name: "{localappdata}\Convert\formats.txt"
 Type: files; Name: "{userprograms}\Convert.lnk"
 Type: dirifempty; Name: "{localappdata}\Convert"
 
