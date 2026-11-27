@@ -4,6 +4,10 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>Convert</RootNamespace>
     <AssemblyName>Convert</AssemblyName>
+    <!-- Program.Main, not the one WPF generates for App.xaml: it hands a file over before WPF loads. -->
+    <StartupObject>Convert.Program</StartupObject>
+    <!-- Nothing in the app reads these at run time. -->
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
     <ApplicationIcon>..\..\packaging\Assets\Convert.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- WPF's Fluent theme (ThemeMode) is still flagged as experimental. -->
@@ -13,4 +17,11 @@
     <ProjectReference Include="..\Convert.Core\Convert.Core.csproj" />
     <Resource Include="..\..\packaging\Assets\Convert.ico" Link="Convert.ico" />
   </ItemGroup>
+  <!-- The WebView2 package also brings its WPF and WinForms controls; Convert only uses the core (DocBrowser.cs). -->
+  <Target Name="LeaveOutUnusedWebView2Controls" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                             Condition="'%(Filename)' == 'Microsoft.Web.WebView2.Wpf' or '%(Filename)' == 'Microsoft.Web.WebView2.WinForms'" />
+    </ItemGroup>
+  </Target>
 </Project>

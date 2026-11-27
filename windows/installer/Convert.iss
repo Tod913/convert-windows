@@ -43,6 +43,11 @@ OutputDir={#OutDir}
 OutputBaseFilename=Convert-{#AppVersion}-setup
 Compression=lzma2/ultra64
 SolidCompression=yes
+; ffmpeg.exe and ffprobe.exe share most of their 100 MB each. A dictionary larger than one of them lets
+; the compressor store the second as references to the first: about 28 MB for both instead of 53 MB.
+; Unpacking then needs 128 MB of memory, and compressing runs in a process of its own to have room.
+LZMADictionarySize=131072
+LZMAUseSeparateProcess=yes
 CloseApplications=yes
 ; Tells Explorer about the classic menu entries added or removed below.
 ChangesAssociations=yes
@@ -73,6 +78,8 @@ Filename: "{app}\Convert.exe"; Parameters: "--unregister-menu"; Flags: runhidden
 ; The print engine's working files and the menu's error log: nothing of the user's.
 Type: filesandordirs; Name: "{localappdata}\Convert\WebView2"
 Type: files; Name: "{localappdata}\Convert\shell.log"
+Type: files; Name: "{localappdata}\Convert\convert.log"
+Type: files; Name: "{localappdata}\Convert\encoders.txt"
 Type: files; Name: "{userprograms}\Convert.lnk"
 Type: dirifempty; Name: "{localappdata}\Convert"
 

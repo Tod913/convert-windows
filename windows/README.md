@@ -20,7 +20,7 @@ and uninstalls again. Its result is kept for 30 days as the `convert-windows-set
 
 - Windows 11 (x64)
 - The [.NET 10 SDK](https://dotnet.microsoft.com/download) to build: `winget install Microsoft.DotNet.SDK.10`
-- **ffmpeg** for audio and video: `winget install Gyan.FFmpeg`
+- **ffmpeg** for audio and video: `winget install Gyan.FFmpeg.Essentials`
   (or put `ffmpeg.exe` and `ffprobe.exe` in `windows\tools\ffmpeg\`, and `build.ps1` bundles them)
 - Optional: **LibreOffice** for Word, ODT and RTF documents:
   `winget install TheDocumentFoundation.LibreOffice`
@@ -141,6 +141,9 @@ The formats, their IDs, the settings and their defaults are the Mac's
   test, for H.264, HEVC and MKV. ProRes has no hardware encoder on Windows, so MOV (ProRes) has no
   "Hardware encoding" option.
 - **AAC** is encoded by ffmpeg's own encoder; the Mac uses Apple's.
+- **AV1** is encoded by libaom, which the bundled ffmpeg (Gyan's "essentials" build) has; the Mac uses
+  SVT-AV1, which is only in the "full" build, twice the size. libaom makes smaller files at the same quality
+  setting and takes about twice as long.
 - **PDF to Word, ODT and RTF** reads the text in the order the PDF draws it, so a PDF that draws its
   text out of reading order can come out reordered. Fonts are named after the PDF's font names
   ("Helvetica", "Times"), which Word and LibreOffice replace with what's installed.

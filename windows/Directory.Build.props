@@ -13,5 +13,7 @@
     <Product>Convert</Product>
     <Company>Convert contributors</Company>
     <Copyright>MIT License</Copyright>
+    <!-- No debugging symbols next to the released app: nothing reads them there. -->
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
   </PropertyGroup>
 </Project>

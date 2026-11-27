@@ -28,10 +28,10 @@ env:
   DOTNET_MULTILEVEL_LOOKUP: 0
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: 1
-  # Gyan's "full" build, the one `winget install Gyan.FFmpeg` installs. The checksum is the one
-  # GitHub lists for the release asset and the winget manifest for Gyan.FFmpeg 9.0.2 states.
+  # Gyan's "essentials" build, the one the setup program bundles and `winget install Gyan.FFmpeg.Essentials`
+  # installs. The checksum is the one the winget manifest for Gyan.FFmpeg.Essentials 9.0.2 states.
   FFMPEG_VERSION: 9.0.2
-  FFMPEG_SHA256: 759d0a9831c436a0eb331ad36f236c06cb04aaa0005da46571f0e9d3d9206f6b
+  FFMPEG_SHA256: 60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba
 
 defaults:
   run:
@@ -78,7 +78,7 @@ jobs:
       - name: Install ffmpeg
         run: |
           $ProgressPreference = "SilentlyContinue"
-          $name = "ffmpeg-$env:FFMPEG_VERSION-full_build"
+          $name = "ffmpeg-$env:FFMPEG_VERSION-essentials_build"
           $zip = Join-Path $env:RUNNER_TEMP "$name.zip"
           Invoke-WebRequest "https://github.com/GyanD/codexffmpeg/releases/download/$env:FFMPEG_VERSION/$name.zip" -OutFile $zip
           $hash = (Get-FileHash $zip -Algorithm SHA256).Hash

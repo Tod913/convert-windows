@@ -174,7 +174,7 @@ public static class Targets
         ];
     }
 
-    public static Target? ById(string id) => All.FirstOrDefault(t => t.Id == id);
+    public static Target? ById(string id) => Catalogue.FirstOrDefault(t => t.Id == id) is { } t && IsAvailable(t) ? t : null;
 
     /// <summary>Output groups valid for every selected kind, in display order.</summary>
     public static List<(OutGroup Group, List<Target> Targets)> Groups(IReadOnlySet<MediaKind> kinds)
@@ -182,9 +182,10 @@ public static class Targets
         if (kinds.Count == 0) return [];
         var allowed = new HashSet<OutGroup>(Enum.GetValues<OutGroup>());
         foreach (var k in kinds) allowed.IntersectWith(OutGroups.For(k));
-        var all = All;
+        // Only the formats these files can become are checked: asking whether HEIC can be written loads
+        // the image engine, and asking ffmpeg for its encoders starts it, so an MP3 does neither for images.
         return Enum.GetValues<OutGroup>().Where(allowed.Contains)
-                   .Select(g => (g, all.Where(t => t.Group == g).ToList())).ToList();
+                   .Select(g => (g, Catalogue.Where(t => t.Group == g && IsAvailable(t)).ToList())).ToList();
     }
 
     /// <summary>Sensible first choice for a selection, skipping the format the files are already in.</summary>

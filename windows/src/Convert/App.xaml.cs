@@ -8,6 +8,9 @@ namespace Convert;
 
 public partial class App : Application
 {
+    /// <summary>Set by <see cref="Program"/> when Convert was started from the classic menu or Send to.</summary>
+    internal static Gathering? Gathered { get; set; }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -49,16 +52,11 @@ public partial class App : Application
             return;
         }
         // From the classic right-click menu and Send to: Explorer may start one Convert per selected
-        // file, so the files are gathered into one window (SelectionGate). --quick <format> converts
-        // them at once, as "Convert to ▸ <format>" does.
-        if (args.Length > 1 && args[0] == "--open")
+        // file, so the files are gathered into one window (SelectionGate, opened in Program). --quick
+        // <format> converts them at once, as "Convert to ▸ <format>" does.
+        if (Gathered is { } gathered)
         {
-            OpenGathered(args[1..], null);
-            return;
-        }
-        if (args.Length > 2 && args[0] == "--quick")
-        {
-            OpenGathered(args[2..], args[1]);
+            OpenGathered(gathered);
             return;
         }
 
@@ -78,16 +76,9 @@ public partial class App : Application
     /// <summary>How long a quick conversion waits for the rest of the selection before it starts.</summary>
     private static readonly TimeSpan QuickGather = TimeSpan.FromSeconds(1);
 
-    private void OpenGathered(string[] args, string? quick)
+    private void OpenGathered(Gathering start)
     {
-        var files = args.Select(a => Path.GetFullPath(a.Trim('"'))).ToList();
-        // A quick conversion gathers only with others of the same format, never into an open window.
-        var gate = SelectionGate.Open(files, SelectionGate.DefaultName + (quick == null ? "" : ".quick." + quick));
-        if (gate == null)
-        {
-            AppExit.Now(0); // another Convert window took them
-            return;
-        }
+        var (files, quick, gate) = start;
 
         // For the setup program's test: write what was gathered to a file instead of opening a window.
         if (Environment.GetEnvironmentVariable("CONVERT_OPEN_REPORT") is { Length: > 0 } report)

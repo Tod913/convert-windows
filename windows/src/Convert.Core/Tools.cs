@@ -110,7 +110,7 @@ public static class Tools
         {
             if (encodersOf != stamp)
             {
-                encoders = ListEncoders(ff);
+                encoders = EncoderCache.Read(stamp) ?? EncoderCache.Write(stamp, ListEncoders(ff));
                 encodersOf = stamp;
             }
             return encoders.Contains(name);
@@ -130,6 +130,42 @@ public static class Tools
         }
         catch (ConvertException) { }
         return set;
+    }
+}
+
+/// <summary>
+/// The encoders of one ffmpeg, kept on disk (%LOCALAPPDATA%\Convert\encoders.txt) under its <see cref="Tools.Stamp"/>.
+/// What a copy of ffmpeg can encode never changes, and asking means starting it (a program of about 100 MB),
+/// which would otherwise happen each time a Convert window opens.
+/// </summary>
+internal static class EncoderCache
+{
+    private static readonly string FilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Convert", "encoders.txt");
+
+    public static HashSet<string>? Read(string stamp)
+    {
+        try
+        {
+            var lines = File.ReadAllLines(FilePath);
+            return lines.Length > 1 && lines[0] == stamp ? new HashSet<string>(lines.Skip(1), StringComparer.Ordinal) : null;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
+    }
+
+    /// <summary>Keeps <paramref name="encoders"/> for next time (not an empty list: ffmpeg may just have failed to start).</summary>
+    public static HashSet<string> Write(string stamp, HashSet<string> encoders)
+    {
+        if (encoders.Count == 0) return encoders;
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+            var tmp = $"{FilePath}.{Environment.ProcessId}.tmp";
+            File.WriteAllLines(tmp, encoders.Order(StringComparer.Ordinal).Prepend(stamp));
+            File.Move(tmp, FilePath, overwrite: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        return encoders;
     }
 }
 

@@ -166,7 +166,10 @@ public static class FF
                 audio = ["-c:a", "libopus", "-b:a", "128k"];
                 break;
             case "mp4-av1":
-                v.AddRange(["-c:v", "libsvtav1", "-crf", $"{Crf(46, 20)}", "-preset", "8"]);
+                // libaom, which the bundled ffmpeg (Gyan's "essentials" build) has; SVT-AV1 is only in the
+                // much larger "full" build. At the same CRF it makes smaller files and takes about twice as
+                // long; -cpu-used 6 is its fastest setting that still aims for small files.
+                v.AddRange(["-c:v", "libaom-av1", "-crf", $"{Crf(46, 20)}", "-b:v", "0", "-cpu-used", "6", "-row-mt", "1", "-tiles", "2x2"]);
                 break;
         }
         if (filters.Count > 0) v.AddRange(["-vf", string.Join(",", filters)]);

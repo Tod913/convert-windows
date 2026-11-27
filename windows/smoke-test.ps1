@@ -276,9 +276,9 @@ if ($AllTargets.Count -eq 0) {
 
 if (-not $FFmpeg -or -not $FFprobe) {
     if ($Strict) {
-        Fail "ffmpeg" "-" "ffmpeg/ffprobe not installed (winget install Gyan.FFmpeg)"
+        Fail "ffmpeg" "-" "ffmpeg/ffprobe not installed (winget install Gyan.FFmpeg.Essentials)"
     } else {
-        Write-Host "Note: ffmpeg isn't installed, so audio and video formats are skipped (winget install Gyan.FFmpeg)."
+        Write-Host "Note: ffmpeg isn't installed, so audio and video formats are skipped (winget install Gyan.FFmpeg.Essentials)."
     }
 }
 if (-not $LibreOffice) {
