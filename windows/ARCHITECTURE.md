@@ -61,6 +61,13 @@ ended, because the app exiting first would leave the partial output behind.
 
 ## Tools
 
+Answers that are slow to find out and rarely change are kept in `%LOCALAPPDATA%\Convert` (`Kept.cs`), each
+under the identity of what it's about: ffmpeg's encoders (`encoders.txt`), the working GPU encoder
+(`gpu.txt`, for a day, forgotten when a hardware encode fails) and which formats ImageMagick writes
+(`formats.txt`). Only the formats a selection can become are checked at all, so a window for an MP3
+never loads ImageMagick and one for a photo never starts ffmpeg. `measure.ps1` measures start-up, hand-over
+and conversion times; the setup workflow runs it on the latest release and on the new build.
+
 `Tools` looks for `ffmpeg.exe`, `ffprobe.exe` and `soffice.exe` on every use, so installing one while
 Convert is open takes effect without a restart. The folders, in order: `tools\` next to `Convert.exe`
 (a bundled ffmpeg), the PATH the app was started with, the PATH as it is in the registry now (winget
@@ -77,7 +84,7 @@ message shown.
 ## Audio and video
 
 Same arguments as the Mac, with these encoders: ffmpeg's own `aac` (Apple's `aac_at` doesn't exist
-here), `libfdk_aac` for HE-AAC (only some ffmpeg builds have it; hidden otherwise), and for hardware
+here), `libaom-av1` for AV1 (the bundled "essentials" ffmpeg has no SVT-AV1), `libfdk_aac` for HE-AAC (only some ffmpeg builds have it; hidden otherwise), and for hardware
 H.264/HEVC whichever of NVENC, Quick Sync or AMF passes a three-frame test encode
 (`HardwareEncoder`). ProRes is always `prores_ks`: it has no hardware encoder on Windows, so it has no
 "Hardware encoding" option. If a hardware encode fails on the real file, it is tried once more in

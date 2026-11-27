@@ -151,6 +151,11 @@ possible, so updates from the original project can still be merged in.
     runtime download is shared with other apps and only happens once), Magick.NET Q8 and the Windows SDK
     projection (needed; they compress well).
   - `windows/measure.ps1` + the setup workflow compare the latest release and this build on one runner.
+  - Picture windows: ImageMagick's writable formats kept on disk (`formats.txt`); the HEIC check no longer
+    loads ImageMagick. ReadyToRun was tried and removed: no faster start, +1.7 MB.
+  - Measured on one GitHub runner, v0.5.0 → this build: setup 128.1 → 45.5 MB; installed 499 → 265 MB;
+    start (MP3) 628 → 405 ms; start (photo) 585 → 467 ms; hand over a file 332 → 106 ms;
+    1 s video 885 → 502 ms. All 121 smoke conversions pass. Version bumped to 0.5.1 (not yet released).
 - **Next step:** you test Stage 5 on your PC; then Stage 6 or 7.
 - **Branches:** `main` = tested work up to Stage 4. Stage 5 is on `claude/charming-gates-ppvnla`.
 
