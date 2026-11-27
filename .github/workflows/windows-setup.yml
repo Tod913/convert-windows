@@ -112,6 +112,28 @@ jobs:
           "$hash  $($setup.Name)" | Set-Content (Join-Path $setup.DirectoryName "$($setup.Name).sha256") -Encoding ascii
           "SETUP=$($setup.FullName)" | Add-Content $env:GITHUB_ENV
           Write-Host ("{0}: {1:N1} MB, SHA-256 {2}" -f $setup.Name, ($setup.Length / 1MB), $hash)
+      # The latest release, measured on this same machine, so the numbers below compare like with like.
+      # It is installed, measured and uninstalled before this build is installed.
+      - name: Measure the latest release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP "previous"
+          gh release download --repo $env:GITHUB_REPOSITORY --pattern "Convert-*-setup.exe" --dir $dir
+          $old = Get-ChildItem $dir -Filter "Convert-*-setup.exe" | Select-Object -First 1
+          if (-not $old) { Write-Host "No release yet"; exit 0 }
+          $p = Start-Process $old.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" -Wait -PassThru
+          if ($p.ExitCode) { throw "The release's setup program ended with code $($p.ExitCode)" }
+          try {
+            windows\measure.ps1 -Label "Latest release ($($old.Name))" -Setup $old.FullName -Results "$env:RUNNER_TEMP\measurements.txt"
+          } finally {
+            $app = Join-Path $env:LOCALAPPDATA "Programs\Convert"
+            $unins = Get-ChildItem $app -Filter "unins*.exe" | Select-Object -First 1
+            if ($unins) { Start-Process $unins.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait }
+            for ($i = 0; $i -lt 20 -and (Test-Path (Join-Path $app "Convert.exe")); $i++) { Start-Sleep -Seconds 1 }
+            Remove-Item (Join-Path $env:LOCALAPPDATA "Convert") -Recurse -Force -ErrorAction SilentlyContinue
+          }
       # Nobody should be the first to run a download. If the runner has no .NET Desktop Runtime of the
       # right version, this also takes the path where the setup program fetches Microsoft's installer.
       - name: Install it here
@@ -196,37 +218,8 @@ jobs:
           $mp3 = Join-Path $desktop "quick test.mp3"
           if (-not (Test-Path $mp3)) { throw "No $mp3 next to the original" }
           Remove-Item $wav, $mp3
-      # Numbers to compare between versions: download and installed size, how long Convert takes to start
-      # (the median of 7 runs of --cli --targets, which starts the app and works out the formats for an
-      # MP3 and for a photo), and how long a process takes that only hands its file to an open window.
-      - name: Measure size and speed
-        run: |
-          $dir = Join-Path $env:LOCALAPPDATA "Programs\Convert"
-          $exe = Join-Path $dir "Convert.exe"
-          $mb = { param($bytes) "{0:N1} MB" -f ($bytes / 1MB) }
-          Write-Host ("Setup program:  " + (& $mb (Get-Item $env:SETUP).Length))
-          Write-Host ("Installed:      " + (& $mb (Get-ChildItem $dir -Recurse -File | Measure-Object Length -Sum).Sum))
-          $m = Join-Path $env:RUNNER_TEMP "measure"
-          New-Item -ItemType Directory -Force $m | Out-Null
-          $mp3 = Join-Path $m "a.mp3"; $png = Join-Path $m "b.png"; $wav1 = Join-Path $m "c.wav"; $wav2 = Join-Path $m "d.wav"
-          & (Join-Path $dir "tools\ffmpeg.exe") -v error -f lavfi -i "sine=duration=1" $mp3
-          & (Join-Path $dir "tools\ffmpeg.exe") -v error -f lavfi -i "testsrc2=size=64x64" -frames:v 1 $png
-          Copy-Item $mp3 $wav1; Copy-Item $mp3 $wav2
-          function Median($name, [scriptblock]$run) {
-            & $run | Out-Null   # warm up
-            $times = 1..7 | ForEach-Object { (Measure-Command { & $run | Out-Null }).TotalMilliseconds } | Sort-Object
-            Write-Host ("{0,-40} {1,6:N0} ms  (runs: {2})" -f $name, $times[3], (($times | ForEach-Object { "{0:N0}" -f $_ }) -join ", "))
-          }
-          Median "Start, formats for an MP3" { & $exe --cli --targets $mp3 }
-          Median "Start, formats for a photo" { & $exe --cli --targets $png }
-          # A window is open (report mode, so it gathers without showing); time the processes that hand over.
-          $env:CONVERT_OPEN_REPORT = Join-Path $m "report.txt"
-          $first = Start-Process $exe -ArgumentList "--open", "`"$wav1`"" -PassThru
-          Start-Sleep -Milliseconds 1500
-          $hand = 1..5 | ForEach-Object { (Measure-Command { Start-Process $exe -ArgumentList "--open", "`"$wav2`"" -Wait }).TotalMilliseconds } | Sort-Object
-          Write-Host ("{0,-40} {1,6:N0} ms  (runs: {2})" -f "Hand a file to an open window", $hand[2], (($hand | ForEach-Object { "{0:N0}" -f $_ }) -join ", "))
-          $first | Wait-Process -Timeout 30
-          $env:CONVERT_OPEN_REPORT = $null
+      - name: Measure this build
+        run: windows\measure.ps1 -Label "This build ($((Get-Item $env:SETUP).Name))" -Setup $env:SETUP -Results "$env:RUNNER_TEMP\measurements.txt"
       # -Strict: audio and video must work with the bundled ffmpeg. LibreOffice isn't installed, so the
       # smoke test skips (and lists) Word, ODT and RTF.
       - name: Smoke test the installed app
@@ -253,6 +246,9 @@ jobs:
             windows/out/Convert-*-setup.exe.sha256
           retention-days: 30
           if-no-files-found: error
+      - name: Measurements
+        if: always()
+        run: if (Test-Path "$env:RUNNER_TEMP\measurements.txt") { Get-Content "$env:RUNNER_TEMP\measurements.txt" }
       - name: Upload the setup and smoke test logs
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
