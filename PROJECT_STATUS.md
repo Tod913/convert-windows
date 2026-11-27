@@ -138,6 +138,19 @@ possible, so updates from the original project can still be merged in.
   installer to Releases), windows/installer/release-notes.md. To do: you enable GitHub two-step login and apply
   at signpath.org; after approval, wire SignPath signing into the workflow (sign app files + package before
   Inno Setup, then the setup program; the package publisher must match the certificate's subject).
+- **Optimization pass (2026-11-27), on branch `claude/charming-gates-ppvnla`:**
+  - ffmpeg: Gyan's *essentials* build instead of *full* (same encoders except SVT-AV1, so AV1 now uses libaom:
+    ~2x slower, ~17% smaller files). Installer LZMA dictionary 128 MB so ffprobe compresses as references to
+    ffmpeg. Measured here: ffmpeg part of the installer 113 MB → 28 MB; installed 436 MB → 202 MB.
+  - Only formats relevant to the selection are probed (no ImageMagick/HEIF probe for audio, no ffmpeg start
+    for photos); ffmpeg's encoder list cached on disk per ffmpeg copy (`encoders.txt`); GPU encoder result
+    cached for a day (`gpu.txt`, forgotten after a failed hardware encode).
+  - `Program.Main` hands classic-menu files to the open window before WPF loads.
+  - Published app: no XML docs, PDBs, or unused WebView2 WPF/WinForms controls (33 → 25 files).
+  - Kept as is, on purpose: one WebView2 per document (network isolation), framework-dependent .NET (the
+    runtime download is shared with other apps and only happens once), Magick.NET Q8 and the Windows SDK
+    projection (needed; they compress well).
+  - `windows/measure.ps1` + the setup workflow compare the latest release and this build on one runner.
 - **Next step:** you test Stage 5 on your PC; then Stage 6 or 7.
 - **Branches:** `main` = tested work up to Stage 4. Stage 5 is on `claude/charming-gates-ppvnla`.
 
