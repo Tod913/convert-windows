@@ -195,6 +195,37 @@ jobs:
           $mp3 = Join-Path $desktop "quick test.mp3"
           if (-not (Test-Path $mp3)) { throw "No $mp3 next to the original" }
           Remove-Item $wav, $mp3
+      # Numbers to compare between versions: download and installed size, how long Convert takes to start
+      # (the median of 7 runs of --cli --targets, which starts the app and works out the formats for an
+      # MP3 and for a photo), and how long a process takes that only hands its file to an open window.
+      - name: Measure size and speed
+        run: |
+          $dir = Join-Path $env:LOCALAPPDATA "Programs\Convert"
+          $exe = Join-Path $dir "Convert.exe"
+          $mb = { param($bytes) "{0:N1} MB" -f ($bytes / 1MB) }
+          Write-Host ("Setup program:  " + (& $mb (Get-Item $env:SETUP).Length))
+          Write-Host ("Installed:      " + (& $mb (Get-ChildItem $dir -Recurse -File | Measure-Object Length -Sum).Sum))
+          $m = Join-Path $env:RUNNER_TEMP "measure"
+          New-Item -ItemType Directory -Force $m | Out-Null
+          $mp3 = Join-Path $m "a.mp3"; $png = Join-Path $m "b.png"; $wav1 = Join-Path $m "c.wav"; $wav2 = Join-Path $m "d.wav"
+          & (Join-Path $dir "tools\ffmpeg.exe") -v error -f lavfi -i "sine=duration=1" $mp3
+          & (Join-Path $dir "tools\ffmpeg.exe") -v error -f lavfi -i "testsrc2=size=64x64" -frames:v 1 $png
+          Copy-Item $mp3 $wav1; Copy-Item $mp3 $wav2
+          function Median($name, [scriptblock]$run) {
+            & $run | Out-Null   # warm up
+            $times = 1..7 | ForEach-Object { (Measure-Command { & $run | Out-Null }).TotalMilliseconds } | Sort-Object
+            Write-Host ("{0,-40} {1,6:N0} ms  (runs: {2})" -f $name, $times[3], (($times | ForEach-Object { "{0:N0}" -f $_ }) -join ", "))
+          }
+          Median "Start, formats for an MP3" { & $exe --cli --targets $mp3 }
+          Median "Start, formats for a photo" { & $exe --cli --targets $png }
+          # A window is open (report mode, so it gathers without showing); time the processes that hand over.
+          $env:CONVERT_OPEN_REPORT = Join-Path $m "report.txt"
+          $first = Start-Process $exe -ArgumentList "--open", "`"$wav1`"" -PassThru
+          Start-Sleep -Milliseconds 1500
+          $hand = 1..5 | ForEach-Object { (Measure-Command { Start-Process $exe -ArgumentList "--open", "`"$wav2`"" -Wait }).TotalMilliseconds } | Sort-Object
+          Write-Host ("{0,-40} {1,6:N0} ms  (runs: {2})" -f "Hand a file to an open window", $hand[2], (($hand | ForEach-Object { "{0:N0}" -f $_ }) -join ", "))
+          $first | Wait-Process -Timeout 30
+          $env:CONVERT_OPEN_REPORT = $null
       # -Strict: audio and video must work with the bundled ffmpeg. LibreOffice isn't installed, so the
       # smoke test skips (and lists) Word, ODT and RTF.
       - name: Smoke test the installed app
