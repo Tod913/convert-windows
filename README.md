@@ -71,6 +71,10 @@ Windows account only and doesn't need administrator rights.
 
 **Requirements:** Windows 11, 64-bit.
 
+**Code signing:** Windows releases are signed through the SignPath Foundation: free code signing provided by
+[SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). See the
+[code signing policy](CODE_SIGNING_POLICY.md).
+
 **Optional extras:**
 
 - **Word, ODT and RTF documents** (to or from) need the free [LibreOffice](https://www.libreoffice.org).

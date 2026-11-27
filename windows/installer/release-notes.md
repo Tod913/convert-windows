@@ -17,4 +17,7 @@ Smaller and faster, measured against 0.5.0 on the same PC:
 - **Video conversions start sooner**: the graphics-card check isn't repeated every time.
 - **MP4 (AV1)** now uses the libaom encoder: files come out smaller, and it takes about twice as long.
 
+Code signing: free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
+[SignPath Foundation](https://signpath.org) ([policy](https://github.com/Tod913/convert-windows/blob/main/CODE_SIGNING_POLICY.md)).
+
 Based on [Convert](https://github.com/newtonstudios/convert) 0.4 by Elias de Sena and contributors.
