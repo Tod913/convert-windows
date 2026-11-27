@@ -187,13 +187,20 @@ public static class FF
 
 /// <summary>
 /// Finds a working GPU encoder: an encoder being compiled into ffmpeg doesn't mean the GPU is there.
-/// Found out once per installed ffmpeg, and again when ffmpeg is installed, updated or removed.
+/// Found out once per installed ffmpeg, and again when ffmpeg is installed, updated or removed. The
+/// answer is also kept on disk for a day (%LOCALAPPDATA%\Convert\gpu.txt), since finding out means up to
+/// three test encodes, which would otherwise delay the first video conversion of every Convert window.
+/// A GPU that has gone in the meantime costs one failed try (the software encoder takes over, and the
+/// answer is forgotten); one that has come waits until the day is up.
 /// </summary>
 public static class HardwareEncoder
 {
     private static readonly object gate = new();
     private static string? detectedFor;
     private static string? vendor;
+    private static readonly TimeSpan KeepFor = TimeSpan.FromDays(1);
+    private static readonly string FilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Convert", "gpu.txt");
 
     /// <summary>"nvenc", "qsv", "amf" or null (software).</summary>
     public static string? Vendor
@@ -206,7 +213,8 @@ public static class HardwareEncoder
             {
                 if (detectedFor != stamp)
                 {
-                    vendor = Detect(ff);
+                    if (Remembered(stamp) is { } known) vendor = known.Length > 0 ? known : null;
+                    else Remember(stamp, vendor = Detect(ff));
                     detectedFor = stamp;
                 }
                 return vendor;
@@ -216,6 +224,38 @@ public static class HardwareEncoder
 
     /// <summary>Starts detection in the background so the first conversion doesn't wait for it.</summary>
     public static void Warmup() => Task.Run(() => Vendor);
+
+    /// <summary>A hardware encode failed: find out afresh next time.</summary>
+    public static void Forget()
+    {
+        lock (gate) detectedFor = null;
+        Paths.TryDelete(FilePath);
+    }
+
+    /// <summary>The vendor kept for this ffmpeg ("" for none), or null when there's no answer from today.</summary>
+    private static string? Remembered(string stamp)
+    {
+        try
+        {
+            var lines = File.ReadAllLines(FilePath);
+            if (lines.Length < 3 || lines[0] != stamp || !long.TryParse(lines[2], CultureInfo.InvariantCulture, out var ticks)) return null;
+            var age = DateTime.UtcNow - new DateTime(ticks, DateTimeKind.Utc);
+            return age >= TimeSpan.Zero && age < KeepFor ? lines[1] : null;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
+    }
+
+    private static void Remember(string stamp, string? found)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+            var tmp = $"{FilePath}.{Environment.ProcessId}.tmp";
+            File.WriteAllLines(tmp, [stamp, found ?? "", DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture)]);
+            File.Move(tmp, FilePath, overwrite: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+    }
 
     private static string? Detect(string ff)
     {

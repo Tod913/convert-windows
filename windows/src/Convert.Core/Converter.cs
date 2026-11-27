@@ -18,7 +18,7 @@ public static class Converter
             case OutGroup.Audio:
             case OutGroup.Video:
                 {
-                    var ff = Tools.FFmpeg ?? throw new ConvertException("ffmpeg isn't installed. Install it with: winget install Gyan.FFmpeg");
+                    var ff = Tools.FFmpeg ?? throw new ConvertException("ffmpeg isn't installed. Install it with: winget install Gyan.FFmpeg.Essentials");
                     var p = await Task.Run(() => FF.ProbeFile(input));
                     if (p.Ok && t.Group == OutGroup.Audio && !p.HasAudio) throw new ConvertException("This file has no audio track");
                     if (p.Ok && t.Group == OutGroup.Video && !p.HasVideo) throw new ConvertException("This file has no video track");
@@ -67,6 +67,7 @@ public static class Converter
         }
         catch (Exception) when (t.HasHardwareOption && s.Hardware && !runner.IsCancelled)
         {
+            HardwareEncoder.Forget();
             await encode(s with { Hardware = false });
         }
     }

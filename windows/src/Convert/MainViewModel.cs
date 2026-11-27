@@ -233,7 +233,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             if (target is not { } t) return null;
             if (t.Group is OutGroup.Audio or OutGroup.Video && Tools.FFmpeg == null)
-                return "Needs ffmpeg (winget install Gyan.FFmpeg)";
+                return "Needs ffmpeg (winget install Gyan.FFmpeg.Essentials)";
             if (t.Group == OutGroup.Document && Tools.LibreOffice == null && Files.Any(f => DocConv.NeedsLibreOffice(f, t)))
                 return "Needs LibreOffice (winget install TheDocumentFoundation.LibreOffice)";
             return null;
